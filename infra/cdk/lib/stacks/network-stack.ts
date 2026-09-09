@@ -137,8 +137,22 @@ export class NetworkStack extends Stack {
       );
     });
 
+    const applicationRouteTable = new ec2.CfnRouteTable(
+      this,
+      "ApplicationRouteTable",
+      {
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-private-application-rt`,
+          },
+        ],
+        vpcId: vpc.vpcId,
+      },
+    );
+
     props.applicationSubnets.forEach((subnet) => {
-      new ec2.CfnSubnet(this, subnet.id, {
+      const applicationSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
         cidrBlock: subnet.cidrBlock,
         mapPublicIpOnLaunch: false,
@@ -150,6 +164,15 @@ export class NetworkStack extends Stack {
         ],
         vpcId: vpc.vpcId,
       });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: applicationRouteTable.ref,
+          subnetId: applicationSubnet.ref,
+        },
+      );
     });
   }
 }
