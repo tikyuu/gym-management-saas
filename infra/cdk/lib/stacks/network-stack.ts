@@ -58,6 +58,18 @@ export class NetworkStack extends Stack {
       },
     );
 
+    const natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
+      domain: "vpc",
+      tags: [
+        {
+          key: "Name",
+          value: `${resourceNamePrefix}-nat-eip`,
+        },
+      ],
+    });
+
+    natElasticIp.addResourceDependency(internetGatewayAttachment);
+
     const publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
       tags: [
         {
