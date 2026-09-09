@@ -20,6 +20,13 @@ export class NetworkStack extends Stack {
       subnetConfiguration: [],
     });
 
+    const internetGateway = new ec2.CfnInternetGateway(this, "InternetGateway");
+
+    new ec2.CfnVPCGatewayAttachment(this, "InternetGatewayAttachment", {
+      internetGatewayId: internetGateway.ref,
+      vpcId: vpc.vpcId,
+    });
+
     props.publicSubnets.forEach((subnet) => {
       new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
