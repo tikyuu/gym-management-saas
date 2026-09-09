@@ -98,8 +98,22 @@ export class NetworkStack extends Stack {
       );
     });
 
+    const privateIngressRouteTable = new ec2.CfnRouteTable(
+      this,
+      "PrivateIngressRouteTable",
+      {
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-private-ingress-rt`,
+          },
+        ],
+        vpcId: vpc.vpcId,
+      },
+    );
+
     props.privateIngressSubnets.forEach((subnet) => {
-      new ec2.CfnSubnet(this, subnet.id, {
+      const privateIngressSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
         cidrBlock: subnet.cidrBlock,
         mapPublicIpOnLaunch: false,
@@ -111,6 +125,15 @@ export class NetworkStack extends Stack {
         ],
         vpcId: vpc.vpcId,
       });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: privateIngressRouteTable.ref,
+          subnetId: privateIngressSubnet.ref,
+        },
+      );
     });
   }
 }
