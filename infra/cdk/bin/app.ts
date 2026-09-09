@@ -9,6 +9,8 @@ new NetworkStack(app, "DevNetworkStack", {
   env: {
     region: devConfig.region,
   },
+  applicationName: devConfig.applicationName,
+  environmentName: devConfig.environmentName,
   vpcCidr: devConfig.vpcCidr,
   publicSubnets: devConfig.publicSubnets,
 });
