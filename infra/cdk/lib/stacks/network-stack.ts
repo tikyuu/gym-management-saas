@@ -176,6 +176,20 @@ export class NetworkStack extends Stack {
       );
     });
 
+    const databaseRouteTable = new ec2.CfnRouteTable(
+      this,
+      "DatabaseRouteTable",
+      {
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-private-database-rt`,
+          },
+        ],
+        vpcId: vpc.vpcId,
+      },
+    );
+
     props.databaseSubnets.forEach((subnet) => {
       new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
