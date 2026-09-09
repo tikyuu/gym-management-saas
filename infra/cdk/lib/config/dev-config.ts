@@ -45,4 +45,18 @@ export const devConfig = {
       cidrBlock: "10.10.22.0/24",
     },
   ],
+  databaseSubnets: [
+    {
+      id: "DatabaseSubnet1",
+      name: "private-database-1a-subnet",
+      availabilityZone: "ap-northeast-1a",
+      cidrBlock: "10.10.31.0/24",
+    },
+    {
+      id: "DatabaseSubnet2",
+      name: "private-database-1c-subnet",
+      availabilityZone: "ap-northeast-1c",
+      cidrBlock: "10.10.32.0/24",
+    },
+  ],
 };

@@ -15,6 +15,7 @@ new NetworkStack(app, "DevNetworkStack", {
   publicSubnets: devConfig.publicSubnets,
   privateIngressSubnets: devConfig.privateIngressSubnets,
   applicationSubnets: devConfig.applicationSubnets,
+  databaseSubnets: devConfig.databaseSubnets,
 });
 
 app.synth();
