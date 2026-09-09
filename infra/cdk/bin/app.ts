@@ -13,6 +13,7 @@ new NetworkStack(app, "DevNetworkStack", {
   environmentName: devConfig.environmentName,
   vpcCidr: devConfig.vpcCidr,
   publicSubnets: devConfig.publicSubnets,
+  privateIngressSubnets: devConfig.privateIngressSubnets,
 });
 
 app.synth();

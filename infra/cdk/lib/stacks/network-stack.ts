@@ -1,16 +1,19 @@
 import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
+interface SubnetConfig {
+  id: string;
+  name: string;
+  availabilityZone: string;
+  cidrBlock: string;
+}
+
 interface NetworkStackProps extends StackProps {
   applicationName: string;
   environmentName: string;
   vpcCidr: string;
-  publicSubnets: {
-    id: string;
-    name: string;
-    availabilityZone: string;
-    cidrBlock: string;
-  }[];
+  publicSubnets: SubnetConfig[];
+  privateIngressSubnets: SubnetConfig[];
 }
 
 export class NetworkStack extends Stack {
@@ -93,6 +96,21 @@ export class NetworkStack extends Stack {
           subnetId: publicSubnet.ref,
         },
       );
+    });
+
+    props.privateIngressSubnets.forEach((subnet) => {
+      new ec2.CfnSubnet(this, subnet.id, {
+        availabilityZone: subnet.availabilityZone,
+        cidrBlock: subnet.cidrBlock,
+        mapPublicIpOnLaunch: false,
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-${subnet.name}`,
+          },
+        ],
+        vpcId: vpc.vpcId,
+      });
     });
   }
 }
