@@ -31,4 +31,18 @@ export const devConfig = {
       cidrBlock: "10.10.12.0/24",
     },
   ],
+  applicationSubnets: [
+    {
+      id: "ApplicationSubnet1",
+      name: "private-application-1a-subnet",
+      availabilityZone: "ap-northeast-1a",
+      cidrBlock: "10.10.21.0/24",
+    },
+    {
+      id: "ApplicationSubnet2",
+      name: "private-application-1c-subnet",
+      availabilityZone: "ap-northeast-1c",
+      cidrBlock: "10.10.22.0/24",
+    },
+  ],
 };

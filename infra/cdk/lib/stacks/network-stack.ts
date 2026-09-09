@@ -14,6 +14,7 @@ interface NetworkStackProps extends StackProps {
   vpcCidr: string;
   publicSubnets: SubnetConfig[];
   privateIngressSubnets: SubnetConfig[];
+  applicationSubnets: SubnetConfig[];
 }
 
 export class NetworkStack extends Stack {
@@ -134,6 +135,21 @@ export class NetworkStack extends Stack {
           subnetId: privateIngressSubnet.ref,
         },
       );
+    });
+
+    props.applicationSubnets.forEach((subnet) => {
+      new ec2.CfnSubnet(this, subnet.id, {
+        availabilityZone: subnet.availabilityZone,
+        cidrBlock: subnet.cidrBlock,
+        mapPublicIpOnLaunch: false,
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-${subnet.name}`,
+          },
+        ],
+        vpcId: vpc.vpcId,
+      });
     });
   }
 }
