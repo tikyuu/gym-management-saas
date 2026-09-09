@@ -9,8 +9,8 @@ new NetworkStack(app, "DevNetworkStack", {
   env: {
     region: devConfig.region,
   },
-  availabilityZones: devConfig.availabilityZones,
   vpcCidr: devConfig.vpcCidr,
+  publicSubnets: devConfig.publicSubnets,
 });
 
 app.synth();
