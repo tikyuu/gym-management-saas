@@ -191,7 +191,7 @@ export class NetworkStack extends Stack {
     );
 
     props.databaseSubnets.forEach((subnet) => {
-      new ec2.CfnSubnet(this, subnet.id, {
+      const databaseSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
         cidrBlock: subnet.cidrBlock,
         mapPublicIpOnLaunch: false,
@@ -203,6 +203,15 @@ export class NetworkStack extends Stack {
         ],
         vpcId: vpc.vpcId,
       });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: databaseRouteTable.ref,
+          subnetId: databaseSubnet.ref,
+        },
+      );
     });
   }
 }
