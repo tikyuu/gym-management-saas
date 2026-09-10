@@ -88,7 +88,7 @@ export class NetworkStack extends Stack {
 
     publicDefaultRoute.addResourceDependency(internetGatewayAttachment);
 
-    props.publicSubnets.forEach((subnet) => {
+    const publicSubnets = props.publicSubnets.map((subnet) => {
       const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
         cidrBlock: subnet.cidrBlock,
@@ -110,7 +110,22 @@ export class NetworkStack extends Stack {
           subnetId: publicSubnet.ref,
         },
       );
+
+      return publicSubnet;
     });
+
+    const natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
+      allocationId: natElasticIp.attrAllocationId,
+      subnetId: publicSubnets[0].ref,
+      tags: [
+        {
+          key: "Name",
+          value: `${resourceNamePrefix}-nat-gateway`,
+        },
+      ],
+    });
+
+    natGateway.addResourceDependency(internetGatewayAttachment);
 
     const privateIngressRouteTable = new ec2.CfnRouteTable(
       this,
