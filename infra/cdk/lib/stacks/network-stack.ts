@@ -37,26 +37,6 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    const publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
-      tags: [
-        {
-          key: "Name",
-          value: `${resourceNamePrefix}-public-rt`,
-        },
-      ],
-      vpcId: vpc.vpcId,
-    });
-
-    const publicDefaultRoute = new ec2.CfnRoute(this, "PublicDefaultRoute", {
-      destinationCidrBlock: "0.0.0.0/0",
-      gatewayId: publicNetwork.internetGateway.ref,
-      routeTableId: publicRouteTable.ref,
-    });
-
-    publicDefaultRoute.addResourceDependency(
-      publicNetwork.internetGatewayAttachment,
-    );
-
     const publicSubnets = props.publicSubnets.map((subnet) => {
       const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
@@ -75,7 +55,7 @@ export class NetworkStack extends Stack {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: publicRouteTable.ref,
+          routeTableId: publicNetwork.publicRouteTable.ref,
           subnetId: publicSubnet.ref,
         },
       );
