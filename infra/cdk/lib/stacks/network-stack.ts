@@ -179,6 +179,12 @@ export class NetworkStack extends Stack {
       },
     );
 
+    new ec2.CfnRoute(this, "ApplicationDefaultRoute", {
+      destinationCidrBlock: "0.0.0.0/0",
+      natGatewayId: natGateway.ref,
+      routeTableId: applicationRouteTable.ref,
+    });
+
     props.applicationSubnets.forEach((subnet) => {
       const applicationSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
