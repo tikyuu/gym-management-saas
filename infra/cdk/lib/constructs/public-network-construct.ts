@@ -11,6 +11,7 @@ interface PublicNetworkConstructProps {
 export class PublicNetworkConstruct extends Construct {
   public readonly internetGateway: ec2.CfnInternetGateway;
   public readonly internetGatewayAttachment: ec2.CfnVPCGatewayAttachment;
+  public readonly natElasticIp: ec2.CfnEIP;
 
   constructor(scope: Construct, id: string, props: PublicNetworkConstructProps) {
     super(scope, id);
@@ -35,6 +36,20 @@ export class PublicNetworkConstruct extends Construct {
         internetGatewayId: this.internetGateway.ref,
         vpcId: props.vpcId,
       },
+    );
+
+    this.natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
+      domain: "vpc",
+      tags: [
+        {
+          key: "Name",
+          value: `${props.resourceNamePrefix}-nat-eip`,
+        },
+      ],
+    });
+
+    this.natElasticIp.addResourceDependency(
+      this.internetGatewayAttachment,
     );
   }
 }
