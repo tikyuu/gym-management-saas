@@ -10,6 +10,7 @@ interface PublicNetworkConstructProps {
 
 export class PublicNetworkConstruct extends Construct {
   public readonly internetGateway: ec2.CfnInternetGateway;
+  public readonly internetGatewayAttachment: ec2.CfnVPCGatewayAttachment;
 
   constructor(scope: Construct, id: string, props: PublicNetworkConstructProps) {
     super(scope, id);
@@ -24,6 +25,15 @@ export class PublicNetworkConstruct extends Construct {
             value: `${props.resourceNamePrefix}-igw`,
           },
         ],
+      },
+    );
+
+    this.internetGatewayAttachment = new ec2.CfnVPCGatewayAttachment(
+      this,
+      "InternetGatewayAttachment",
+      {
+        internetGatewayId: this.internetGateway.ref,
+        vpcId: props.vpcId,
       },
     );
   }

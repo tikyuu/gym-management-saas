@@ -37,15 +37,6 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    const internetGatewayAttachment = new ec2.CfnVPCGatewayAttachment(
-      this,
-      "InternetGatewayAttachment",
-      {
-        internetGatewayId: publicNetwork.internetGateway.ref,
-        vpcId: vpc.vpcId,
-      },
-    );
-
     const natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
       domain: "vpc",
       tags: [
@@ -56,7 +47,9 @@ export class NetworkStack extends Stack {
       ],
     });
 
-    natElasticIp.addResourceDependency(internetGatewayAttachment);
+    natElasticIp.addResourceDependency(
+      publicNetwork.internetGatewayAttachment,
+    );
 
     const publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
       tags: [
@@ -74,7 +67,9 @@ export class NetworkStack extends Stack {
       routeTableId: publicRouteTable.ref,
     });
 
-    publicDefaultRoute.addResourceDependency(internetGatewayAttachment);
+    publicDefaultRoute.addResourceDependency(
+      publicNetwork.internetGatewayAttachment,
+    );
 
     const publicSubnets = props.publicSubnets.map((subnet) => {
       const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
@@ -113,7 +108,7 @@ export class NetworkStack extends Stack {
       ],
     });
 
-    natGateway.addResourceDependency(internetGatewayAttachment);
+    natGateway.addResourceDependency(publicNetwork.internetGatewayAttachment);
 
     const privateIngressRouteTable = new ec2.CfnRouteTable(
       this,
