@@ -1,12 +1,7 @@
 import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-
-interface SubnetConfig {
-  id: string;
-  name: string;
-  availabilityZone: string;
-  cidrBlock: string;
-}
+import { PublicNetworkConstruct } from "../constructs/public-network-construct";
+import type { SubnetConfig } from "../types/subnet-config";
 
 interface NetworkStackProps extends StackProps {
   applicationName: string;
@@ -34,6 +29,12 @@ export class NetworkStack extends Stack {
       natGateways: 0,
       subnetConfiguration: [],
       vpcName: `${resourceNamePrefix}-vpc`,
+    });
+
+    new PublicNetworkConstruct(this, "PublicNetwork", {
+      vpcId: vpc.vpcId,
+      resourceNamePrefix,
+      subnets: props.publicSubnets,
     });
 
     const internetGateway = new ec2.CfnInternetGateway(
