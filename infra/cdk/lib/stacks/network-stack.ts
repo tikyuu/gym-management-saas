@@ -37,20 +37,6 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    const natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
-      domain: "vpc",
-      tags: [
-        {
-          key: "Name",
-          value: `${resourceNamePrefix}-nat-eip`,
-        },
-      ],
-    });
-
-    natElasticIp.addResourceDependency(
-      publicNetwork.internetGatewayAttachment,
-    );
-
     const publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
       tags: [
         {
@@ -98,7 +84,7 @@ export class NetworkStack extends Stack {
     });
 
     const natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
-      allocationId: natElasticIp.attrAllocationId,
+      allocationId: publicNetwork.natElasticIp.attrAllocationId,
       subnetId: publicSubnets[0].ref,
       tags: [
         {
