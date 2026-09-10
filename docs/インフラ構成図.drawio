@@ -363,6 +363,14 @@
             </Array>
           </mxGeometry>
         </mxCell>
+        <mxCell id="edge-64" value="S3通信" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=0;endArrow=block;endFill=1;startArrow=none;startFill=1;strokeColor=#24826B;strokeWidth=2;dashed=1;fontFamily=Helvetica;fontSize=15;fontColor=#24826B;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="endpoint" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1325" y="1268" />
+              <mxPoint x="1325" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
