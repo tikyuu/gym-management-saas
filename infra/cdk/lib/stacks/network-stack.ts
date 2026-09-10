@@ -31,30 +31,17 @@ export class NetworkStack extends Stack {
       vpcName: `${resourceNamePrefix}-vpc`,
     });
 
-    new PublicNetworkConstruct(this, "PublicNetwork", {
+    const publicNetwork = new PublicNetworkConstruct(this, "PublicNetwork", {
       vpcId: vpc.vpcId,
       resourceNamePrefix,
       subnets: props.publicSubnets,
     });
 
-    const internetGateway = new ec2.CfnInternetGateway(
-      this,
-      "InternetGateway",
-      {
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-igw`,
-          },
-        ],
-      },
-    );
-
     const internetGatewayAttachment = new ec2.CfnVPCGatewayAttachment(
       this,
       "InternetGatewayAttachment",
       {
-        internetGatewayId: internetGateway.ref,
+        internetGatewayId: publicNetwork.internetGateway.ref,
         vpcId: vpc.vpcId,
       },
     );
@@ -83,7 +70,7 @@ export class NetworkStack extends Stack {
 
     const publicDefaultRoute = new ec2.CfnRoute(this, "PublicDefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
-      gatewayId: internetGateway.ref,
+      gatewayId: publicNetwork.internetGateway.ref,
       routeTableId: publicRouteTable.ref,
     });
 
