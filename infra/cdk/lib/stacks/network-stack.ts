@@ -37,35 +37,9 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    const publicSubnets = props.publicSubnets.map((subnet) => {
-      const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
-        availabilityZone: subnet.availabilityZone,
-        cidrBlock: subnet.cidrBlock,
-        mapPublicIpOnLaunch: false,
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-${subnet.name}`,
-          },
-        ],
-        vpcId: vpc.vpcId,
-      });
-
-      new ec2.CfnSubnetRouteTableAssociation(
-        this,
-        `${subnet.id}RouteTableAssociation`,
-        {
-          routeTableId: publicNetwork.publicRouteTable.ref,
-          subnetId: publicSubnet.ref,
-        },
-      );
-
-      return publicSubnet;
-    });
-
     const natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
       allocationId: publicNetwork.natElasticIp.attrAllocationId,
-      subnetId: publicSubnets[0].ref,
+      subnetId: publicNetwork.subnets[0].ref,
       tags: [
         {
           key: "Name",

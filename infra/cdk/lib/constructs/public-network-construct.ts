@@ -13,6 +13,7 @@ export class PublicNetworkConstruct extends Construct {
   public readonly internetGatewayAttachment: ec2.CfnVPCGatewayAttachment;
   public readonly natElasticIp: ec2.CfnEIP;
   public readonly publicRouteTable: ec2.CfnRouteTable;
+  public readonly subnets: ec2.CfnSubnet[];
 
   constructor(scope: Construct, id: string, props: PublicNetworkConstructProps) {
     super(scope, id);
@@ -72,5 +73,31 @@ export class PublicNetworkConstruct extends Construct {
     publicDefaultRoute.addResourceDependency(
       this.internetGatewayAttachment,
     );
+
+    this.subnets = props.subnets.map((subnet) => {
+      const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
+        availabilityZone: subnet.availabilityZone,
+        cidrBlock: subnet.cidrBlock,
+        mapPublicIpOnLaunch: false,
+        tags: [
+          {
+            key: "Name",
+            value: `${props.resourceNamePrefix}-${subnet.name}`,
+          },
+        ],
+        vpcId: props.vpcId,
+      });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: this.publicRouteTable.ref,
+          subnetId: publicSubnet.ref,
+        },
+      );
+
+      return publicSubnet;
+    });
   }
 }
