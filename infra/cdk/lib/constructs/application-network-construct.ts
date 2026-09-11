@@ -28,5 +28,11 @@ export class ApplicationNetworkConstruct extends Construct {
       ],
       vpcId: props.vpcId,
     });
+
+    new ec2.CfnRoute(this, "DefaultRoute", {
+      destinationCidrBlock: "0.0.0.0/0",
+      natGatewayId: props.natGatewayId,
+      routeTableId: this.routeTable.ref,
+    });
   }
 }
