@@ -61,23 +61,13 @@ export class NetworkStack extends Stack {
       },
     );
 
-    new DatabaseNetworkConstruct(this, "DatabaseNetwork", {
-      vpcId: vpc.vpcId,
-      resourceNamePrefix,
-      subnets: props.databaseSubnets,
-    });
-
-    const databaseRouteTable = new ec2.CfnRouteTable(
+    const databaseNetwork = new DatabaseNetworkConstruct(
       this,
-      "DatabaseRouteTable",
+      "DatabaseNetwork",
       {
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-private-database-rt`,
-          },
-        ],
         vpcId: vpc.vpcId,
+        resourceNamePrefix,
+        subnets: props.databaseSubnets,
       },
     );
 
@@ -99,7 +89,7 @@ export class NetworkStack extends Stack {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: databaseRouteTable.ref,
+          routeTableId: databaseNetwork.routeTable.ref,
           subnetId: databaseSubnet.ref,
         },
       );
