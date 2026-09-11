@@ -38,49 +38,15 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    new PrivateIngressNetworkConstruct(this, "PrivateIngressNetwork", {
-      vpcId: vpc.vpcId,
-      resourceNamePrefix,
-      subnets: props.privateIngressSubnets,
-    });
-
-    const privateIngressRouteTable = new ec2.CfnRouteTable(
+    const privateIngressNetwork = new PrivateIngressNetworkConstruct(
       this,
-      "PrivateIngressRouteTable",
+      "PrivateIngressNetwork",
       {
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-private-ingress-rt`,
-          },
-        ],
         vpcId: vpc.vpcId,
+        resourceNamePrefix,
+        subnets: props.privateIngressSubnets,
       },
     );
-
-    props.privateIngressSubnets.forEach((subnet) => {
-      const privateIngressSubnet = new ec2.CfnSubnet(this, subnet.id, {
-        availabilityZone: subnet.availabilityZone,
-        cidrBlock: subnet.cidrBlock,
-        mapPublicIpOnLaunch: false,
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-${subnet.name}`,
-          },
-        ],
-        vpcId: vpc.vpcId,
-      });
-
-      new ec2.CfnSubnetRouteTableAssociation(
-        this,
-        `${subnet.id}RouteTableAssociation`,
-        {
-          routeTableId: privateIngressRouteTable.ref,
-          subnetId: privateIngressSubnet.ref,
-        },
-      );
-    });
 
     const applicationRouteTable = new ec2.CfnRouteTable(
       this,
