@@ -1,5 +1,6 @@
 import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
+import { PrivateIngressNetworkConstruct } from "../constructs/private-ingress-network-construct";
 import { PublicNetworkConstruct } from "../constructs/public-network-construct";
 import type { SubnetConfig } from "../types/subnet-config";
 
@@ -35,6 +36,12 @@ export class NetworkStack extends Stack {
       vpcId: vpc.vpcId,
       resourceNamePrefix,
       subnets: props.publicSubnets,
+    });
+
+    new PrivateIngressNetworkConstruct(this, "PrivateIngressNetwork", {
+      vpcId: vpc.vpcId,
+      resourceNamePrefix,
+      subnets: props.privateIngressSubnets,
     });
 
     const privateIngressRouteTable = new ec2.CfnRouteTable(
