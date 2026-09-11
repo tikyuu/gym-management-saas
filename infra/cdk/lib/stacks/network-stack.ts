@@ -60,12 +60,6 @@ export class NetworkStack extends Stack {
       },
     );
 
-    new ec2.CfnRoute(this, "ApplicationDefaultRoute", {
-      destinationCidrBlock: "0.0.0.0/0",
-      natGatewayId: publicNetwork.natGateway.ref,
-      routeTableId: applicationNetwork.routeTable.ref,
-    });
-
     new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
       routeTableIds: [applicationNetwork.routeTable.ref],
       serviceName: `com.amazonaws.${this.region}.s3`,
