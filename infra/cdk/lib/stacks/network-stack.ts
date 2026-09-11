@@ -37,19 +37,6 @@ export class NetworkStack extends Stack {
       subnets: props.publicSubnets,
     });
 
-    const natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
-      allocationId: publicNetwork.natElasticIp.attrAllocationId,
-      subnetId: publicNetwork.subnets[0].ref,
-      tags: [
-        {
-          key: "Name",
-          value: `${resourceNamePrefix}-nat-gateway`,
-        },
-      ],
-    });
-
-    natGateway.addResourceDependency(publicNetwork.internetGatewayAttachment);
-
     const privateIngressRouteTable = new ec2.CfnRouteTable(
       this,
       "PrivateIngressRouteTable",
@@ -104,7 +91,7 @@ export class NetworkStack extends Stack {
 
     new ec2.CfnRoute(this, "ApplicationDefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
-      natGatewayId: natGateway.ref,
+      natGatewayId: publicNetwork.natGateway.ref,
       routeTableId: applicationRouteTable.ref,
     });
 
