@@ -10,7 +10,7 @@ interface ApplicationNetworkConstructProps {
 }
 
 export class ApplicationNetworkConstruct extends Construct {
-  public readonly routeTable: ec2.CfnRouteTable;
+  public readonly subnets: ec2.CfnSubnet[];
 
   constructor(
     scope: Construct,
@@ -19,7 +19,7 @@ export class ApplicationNetworkConstruct extends Construct {
   ) {
     super(scope, id);
 
-    this.routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
+    const routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
       tags: [
         {
           key: "Name",
@@ -32,11 +32,11 @@ export class ApplicationNetworkConstruct extends Construct {
     new ec2.CfnRoute(this, "DefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
       natGatewayId: props.natGatewayId,
-      routeTableId: this.routeTable.ref,
+      routeTableId: routeTable.ref,
     });
 
     new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
-      routeTableIds: [this.routeTable.ref],
+      routeTableIds: [routeTable.ref],
       serviceName: `com.amazonaws.${Stack.of(this).region}.s3`,
       tags: [
         {
@@ -46,6 +46,32 @@ export class ApplicationNetworkConstruct extends Construct {
       ],
       vpcEndpointType: "Gateway",
       vpcId: props.vpcId,
+    });
+
+    this.subnets = props.subnets.map((subnet) => {
+      const applicationSubnet = new ec2.CfnSubnet(this, subnet.id, {
+        availabilityZone: subnet.availabilityZone,
+        cidrBlock: subnet.cidrBlock,
+        mapPublicIpOnLaunch: false,
+        tags: [
+          {
+            key: "Name",
+            value: `${props.resourceNamePrefix}-${subnet.name}`,
+          },
+        ],
+        vpcId: props.vpcId,
+      });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: routeTable.ref,
+          subnetId: applicationSubnet.ref,
+        },
+      );
+
+      return applicationSubnet;
     });
   }
 }
