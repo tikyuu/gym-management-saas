@@ -9,17 +9,12 @@ interface PublicNetworkConstructProps {
 }
 
 export class PublicNetworkConstruct extends Construct {
-  public readonly internetGateway: ec2.CfnInternetGateway;
-  public readonly internetGatewayAttachment: ec2.CfnVPCGatewayAttachment;
-  public readonly natElasticIp: ec2.CfnEIP;
   public readonly natGateway: ec2.CfnNatGateway;
-  public readonly publicRouteTable: ec2.CfnRouteTable;
-  public readonly subnets: ec2.CfnSubnet[];
 
   constructor(scope: Construct, id: string, props: PublicNetworkConstructProps) {
     super(scope, id);
 
-    this.internetGateway = new ec2.CfnInternetGateway(
+    const internetGateway = new ec2.CfnInternetGateway(
       this,
       "InternetGateway",
       {
@@ -32,16 +27,16 @@ export class PublicNetworkConstruct extends Construct {
       },
     );
 
-    this.internetGatewayAttachment = new ec2.CfnVPCGatewayAttachment(
+    const internetGatewayAttachment = new ec2.CfnVPCGatewayAttachment(
       this,
       "InternetGatewayAttachment",
       {
-        internetGatewayId: this.internetGateway.ref,
+        internetGatewayId: internetGateway.ref,
         vpcId: props.vpcId,
       },
     );
 
-    this.natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
+    const natElasticIp = new ec2.CfnEIP(this, "NatElasticIp", {
       domain: "vpc",
       tags: [
         {
@@ -51,11 +46,9 @@ export class PublicNetworkConstruct extends Construct {
       ],
     });
 
-    this.natElasticIp.addResourceDependency(
-      this.internetGatewayAttachment,
-    );
+    natElasticIp.addResourceDependency(internetGatewayAttachment);
 
-    this.publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
+    const publicRouteTable = new ec2.CfnRouteTable(this, "PublicRouteTable", {
       tags: [
         {
           key: "Name",
@@ -67,15 +60,15 @@ export class PublicNetworkConstruct extends Construct {
 
     const publicDefaultRoute = new ec2.CfnRoute(this, "PublicDefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
-      gatewayId: this.internetGateway.ref,
-      routeTableId: this.publicRouteTable.ref,
+      gatewayId: internetGateway.ref,
+      routeTableId: publicRouteTable.ref,
     });
 
     publicDefaultRoute.addResourceDependency(
-      this.internetGatewayAttachment,
+      internetGatewayAttachment,
     );
 
-    this.subnets = props.subnets.map((subnet) => {
+    const publicSubnets = props.subnets.map((subnet) => {
       const publicSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
         cidrBlock: subnet.cidrBlock,
@@ -93,7 +86,7 @@ export class PublicNetworkConstruct extends Construct {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: this.publicRouteTable.ref,
+          routeTableId: publicRouteTable.ref,
           subnetId: publicSubnet.ref,
         },
       );
@@ -102,8 +95,8 @@ export class PublicNetworkConstruct extends Construct {
     });
 
     this.natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
-      allocationId: this.natElasticIp.attrAllocationId,
-      subnetId: this.subnets[0].ref,
+      allocationId: natElasticIp.attrAllocationId,
+      subnetId: publicSubnets[0].ref,
       tags: [
         {
           key: "Name",
@@ -113,7 +106,7 @@ export class PublicNetworkConstruct extends Construct {
     });
 
     this.natGateway.addResourceDependency(
-      this.internetGatewayAttachment,
+      internetGatewayAttachment,
     );
   }
 }
