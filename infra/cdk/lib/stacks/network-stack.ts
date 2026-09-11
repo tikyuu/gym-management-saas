@@ -60,19 +60,6 @@ export class NetworkStack extends Stack {
       },
     );
 
-    new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
-      routeTableIds: [applicationNetwork.routeTable.ref],
-      serviceName: `com.amazonaws.${this.region}.s3`,
-      tags: [
-        {
-          key: "Name",
-          value: `${resourceNamePrefix}-s3-gateway-endpoint`,
-        },
-      ],
-      vpcEndpointType: "Gateway",
-      vpcId: vpc.vpcId,
-    });
-
     props.applicationSubnets.forEach((subnet) => {
       const applicationSubnet = new ec2.CfnSubnet(this, subnet.id, {
         availabilityZone: subnet.availabilityZone,
