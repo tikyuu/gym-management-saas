@@ -60,30 +60,6 @@ export class NetworkStack extends Stack {
       },
     );
 
-    props.applicationSubnets.forEach((subnet) => {
-      const applicationSubnet = new ec2.CfnSubnet(this, subnet.id, {
-        availabilityZone: subnet.availabilityZone,
-        cidrBlock: subnet.cidrBlock,
-        mapPublicIpOnLaunch: false,
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-${subnet.name}`,
-          },
-        ],
-        vpcId: vpc.vpcId,
-      });
-
-      new ec2.CfnSubnetRouteTableAssociation(
-        this,
-        `${subnet.id}RouteTableAssociation`,
-        {
-          routeTableId: applicationNetwork.routeTable.ref,
-          subnetId: applicationSubnet.ref,
-        },
-      );
-    });
-
     const databaseRouteTable = new ec2.CfnRouteTable(
       this,
       "DatabaseRouteTable",
