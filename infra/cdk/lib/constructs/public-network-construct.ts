@@ -12,6 +12,7 @@ export class PublicNetworkConstruct extends Construct {
   public readonly internetGateway: ec2.CfnInternetGateway;
   public readonly internetGatewayAttachment: ec2.CfnVPCGatewayAttachment;
   public readonly natElasticIp: ec2.CfnEIP;
+  public readonly natGateway: ec2.CfnNatGateway;
   public readonly publicRouteTable: ec2.CfnRouteTable;
   public readonly subnets: ec2.CfnSubnet[];
 
@@ -99,5 +100,20 @@ export class PublicNetworkConstruct extends Construct {
 
       return publicSubnet;
     });
+
+    this.natGateway = new ec2.CfnNatGateway(this, "NatGateway", {
+      allocationId: this.natElasticIp.attrAllocationId,
+      subnetId: this.subnets[0].ref,
+      tags: [
+        {
+          key: "Name",
+          value: `${props.resourceNamePrefix}-nat-gateway`,
+        },
+      ],
+    });
+
+    this.natGateway.addResourceDependency(
+      this.internetGatewayAttachment,
+    );
   }
 }
