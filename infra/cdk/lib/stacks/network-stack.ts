@@ -1,5 +1,6 @@
 import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
+import { ApplicationNetworkConstruct } from "../constructs/application-network-construct";
 import { PrivateIngressNetworkConstruct } from "../constructs/private-ingress-network-construct";
 import { PublicNetworkConstruct } from "../constructs/public-network-construct";
 import type { SubnetConfig } from "../types/subnet-config";
@@ -48,28 +49,25 @@ export class NetworkStack extends Stack {
       },
     );
 
-    const applicationRouteTable = new ec2.CfnRouteTable(
+    const applicationNetwork = new ApplicationNetworkConstruct(
       this,
-      "ApplicationRouteTable",
+      "ApplicationNetwork",
       {
-        tags: [
-          {
-            key: "Name",
-            value: `${resourceNamePrefix}-private-application-rt`,
-          },
-        ],
         vpcId: vpc.vpcId,
+        resourceNamePrefix,
+        subnets: props.applicationSubnets,
+        natGatewayId: publicNetwork.natGateway.ref,
       },
     );
 
     new ec2.CfnRoute(this, "ApplicationDefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
       natGatewayId: publicNetwork.natGateway.ref,
-      routeTableId: applicationRouteTable.ref,
+      routeTableId: applicationNetwork.routeTable.ref,
     });
 
     new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
-      routeTableIds: [applicationRouteTable.ref],
+      routeTableIds: [applicationNetwork.routeTable.ref],
       serviceName: `com.amazonaws.${this.region}.s3`,
       tags: [
         {
@@ -99,7 +97,7 @@ export class NetworkStack extends Stack {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: applicationRouteTable.ref,
+          routeTableId: applicationNetwork.routeTable.ref,
           subnetId: applicationSubnet.ref,
         },
       );
