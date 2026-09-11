@@ -1,4 +1,4 @@
-import { aws_ec2 as ec2 } from "aws-cdk-lib";
+import { Stack, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import type { SubnetConfig } from "../types/subnet-config";
 
@@ -33,6 +33,19 @@ export class ApplicationNetworkConstruct extends Construct {
       destinationCidrBlock: "0.0.0.0/0",
       natGatewayId: props.natGatewayId,
       routeTableId: this.routeTable.ref,
+    });
+
+    new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
+      routeTableIds: [this.routeTable.ref],
+      serviceName: `com.amazonaws.${Stack.of(this).region}.s3`,
+      tags: [
+        {
+          key: "Name",
+          value: `${props.resourceNamePrefix}-s3-gateway-endpoint`,
+        },
+      ],
+      vpcEndpointType: "Gateway",
+      vpcId: props.vpcId,
     });
   }
 }
