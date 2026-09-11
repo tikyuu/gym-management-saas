@@ -1,6 +1,7 @@
 import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { ApplicationNetworkConstruct } from "../constructs/application-network-construct";
+import { DatabaseNetworkConstruct } from "../constructs/database-network-construct";
 import { PrivateIngressNetworkConstruct } from "../constructs/private-ingress-network-construct";
 import { PublicNetworkConstruct } from "../constructs/public-network-construct";
 import type { SubnetConfig } from "../types/subnet-config";
@@ -59,6 +60,12 @@ export class NetworkStack extends Stack {
         natGatewayId: publicNetwork.natGateway.ref,
       },
     );
+
+    new DatabaseNetworkConstruct(this, "DatabaseNetwork", {
+      vpcId: vpc.vpcId,
+      resourceNamePrefix,
+      subnets: props.databaseSubnets,
+    });
 
     const databaseRouteTable = new ec2.CfnRouteTable(
       this,
