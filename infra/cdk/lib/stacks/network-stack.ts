@@ -4,6 +4,7 @@ import { ApplicationNetworkConstruct } from "../constructs/application-network-c
 import { DatabaseNetworkConstruct } from "../constructs/database-network-construct";
 import { PrivateIngressNetworkConstruct } from "../constructs/private-ingress-network-construct";
 import { PublicNetworkConstruct } from "../constructs/public-network-construct";
+import { SecurityGroupConstruct } from "../constructs/security-group-construct";
 import type { SubnetConfig } from "../types/subnet-config";
 
 interface NetworkStackProps extends StackProps {
@@ -32,6 +33,11 @@ export class NetworkStack extends Stack {
       natGateways: 0,
       subnetConfiguration: [],
       vpcName: `${resourceNamePrefix}-vpc`,
+    });
+
+    const securityGroups = new SecurityGroupConstruct(this, "SecurityGroups", {
+      vpc,
+      resourceNamePrefix,
     });
 
     const publicNetwork = new PublicNetworkConstruct(this, "PublicNetwork", {
