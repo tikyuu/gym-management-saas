@@ -44,5 +44,11 @@ export class SecurityGroupConstruct extends Construct {
       securityGroupName: `${props.resourceNamePrefix}-rds-sg`,
       vpc: props.vpc,
     });
+
+    this.rdsSecurityGroup.addIngressRule(
+      this.ecsSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Allow PostgreSQL traffic from ECS tasks",
+    );
   }
 }
