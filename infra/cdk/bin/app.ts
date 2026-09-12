@@ -6,7 +6,7 @@ import { NetworkStack } from "../lib/stacks/network-stack";
 
 const app = new cdk.App();
 
-new NetworkStack(app, "DevNetworkStack", {
+const networkStack = new NetworkStack(app, "DevNetworkStack", {
   env: {
     region: devConfig.region,
   },
@@ -20,9 +20,11 @@ new NetworkStack(app, "DevNetworkStack", {
 });
 
 new DatabaseStack(app, "DevDatabaseStack", {
+  databaseSubnetIds: networkStack.databaseSubnetIds,
   env: {
     region: devConfig.region,
   },
+  vpc: networkStack.vpc,
 });
 
 app.synth();
