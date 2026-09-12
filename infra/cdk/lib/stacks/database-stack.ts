@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 
 interface DatabaseStackProps extends StackProps {
   databaseSubnetIds: string[];
+  rdsSecurityGroup: ec2.ISecurityGroup;
   vpc: ec2.IVpc;
 }
 

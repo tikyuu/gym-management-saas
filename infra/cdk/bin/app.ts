@@ -24,6 +24,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   env: {
     region: devConfig.region,
   },
+  rdsSecurityGroup: networkStack.rdsSecurityGroup,
   vpc: networkStack.vpc,
 });
 
