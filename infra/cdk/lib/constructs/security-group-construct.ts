@@ -9,6 +9,7 @@ interface SecurityGroupConstructProps {
 export class SecurityGroupConstruct extends Construct {
   public readonly albSecurityGroup: ec2.SecurityGroup;
   public readonly ecsSecurityGroup: ec2.SecurityGroup;
+  public readonly rdsSecurityGroup: ec2.SecurityGroup;
 
   constructor(
     scope: Construct,
@@ -36,5 +37,12 @@ export class SecurityGroupConstruct extends Construct {
       ec2.Port.tcp(8000),
       "Allow traffic from the internal ALB",
     );
+
+    this.rdsSecurityGroup = new ec2.SecurityGroup(this, "RdsSecurityGroup", {
+      allowAllOutbound: true,
+      description: "Security group for the RDS database",
+      securityGroupName: `${props.resourceNamePrefix}-rds-sg`,
+      vpc: props.vpc,
+    });
   }
 }
