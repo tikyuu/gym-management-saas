@@ -40,7 +40,6 @@ new DatabaseStack(app, "DevDatabaseStack", {
   },
   environmentName: devConfig.environmentName,
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
-  vpc: networkStack.vpc,
 });
 
 app.synth();

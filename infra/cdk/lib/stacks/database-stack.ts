@@ -25,7 +25,6 @@ interface DatabaseStackProps extends StackProps {
   databaseStorageType: string;
   environmentName: string;
   rdsSecurityGroup: ec2.ISecurityGroup;
-  vpc: ec2.IVpc;
 }
 
 export class DatabaseStack extends Stack {
