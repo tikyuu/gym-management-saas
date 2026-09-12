@@ -18,6 +18,8 @@ interface NetworkStackProps extends StackProps {
 }
 
 export class NetworkStack extends Stack {
+  public readonly databaseSubnetIds: string[];
+  public readonly rdsSecurityGroup: ec2.ISecurityGroup;
   public readonly vpc: ec2.IVpc;
 
   constructor(scope: Construct, id: string, props: NetworkStackProps) {
@@ -41,6 +43,8 @@ export class NetworkStack extends Stack {
       vpc: this.vpc,
       resourceNamePrefix,
     });
+
+    this.rdsSecurityGroup = securityGroups.rdsSecurityGroup;
 
     const publicNetwork = new PublicNetworkConstruct(this, "PublicNetwork", {
       vpcId: this.vpc.vpcId,
@@ -77,6 +81,10 @@ export class NetworkStack extends Stack {
         resourceNamePrefix,
         subnets: props.databaseSubnets,
       },
+    );
+
+    this.databaseSubnetIds = databaseNetwork.subnets.map(
+      (subnet) => subnet.ref,
     );
   }
 }
