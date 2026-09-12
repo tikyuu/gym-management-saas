@@ -22,10 +22,17 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 new DatabaseStack(app, "DevDatabaseStack", {
   applicationName: devConfig.applicationName,
   databaseAllocatedStorage: devConfig.databaseAllocatedStorage,
+  databaseAutoMinorVersionUpgrade: devConfig.databaseAutoMinorVersionUpgrade,
+  databaseBackupRetentionPeriod: devConfig.databaseBackupRetentionPeriod,
+  databaseDeletionProtection: devConfig.databaseDeletionProtection,
   databaseEngineVersion: devConfig.databaseEngineVersion,
   databaseInstanceClass: devConfig.databaseInstanceClass,
   databaseMaxAllocatedStorage: devConfig.databaseMaxAllocatedStorage,
   databaseMultiAz: devConfig.databaseMultiAz,
+  databasePreferredBackupWindow: devConfig.databasePreferredBackupWindow,
+  databasePreferredMaintenanceWindow:
+    devConfig.databasePreferredMaintenanceWindow,
+  databaseRemovalPolicy: devConfig.databaseRemovalPolicy,
   databaseSubnetIds: networkStack.databaseSubnetIds,
   databaseStorageType: devConfig.databaseStorageType,
   env: {

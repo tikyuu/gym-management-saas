@@ -1,10 +1,18 @@
+import { RemovalPolicy } from "aws-cdk-lib";
+
 export const devConfig = {
   applicationName: "gym-management",
   databaseAllocatedStorage: 20,
+  databaseAutoMinorVersionUpgrade: true,
+  databaseBackupRetentionPeriod: 1,
+  databaseDeletionProtection: false,
   databaseEngineVersion: "18.4",
   databaseInstanceClass: "db.t4g.micro",
   databaseMaxAllocatedStorage: 50,
   databaseMultiAz: false,
+  databasePreferredBackupWindow: "19:00-19:30",
+  databasePreferredMaintenanceWindow: "fri:20:00-fri:21:00",
+  databaseRemovalPolicy: RemovalPolicy.DESTROY,
   databaseStorageType: "gp3",
   environmentName: "dev",
   region: "ap-northeast-1",
