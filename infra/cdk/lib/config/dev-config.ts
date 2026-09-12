@@ -1,7 +1,11 @@
 export const devConfig = {
   applicationName: "gym-management",
-  databaseEngineVersion: "18.6",
+  databaseAllocatedStorage: 20,
+  databaseEngineVersion: "18.4",
   databaseInstanceClass: "db.t4g.micro",
+  databaseMaxAllocatedStorage: 50,
+  databaseMultiAz: false,
+  databaseStorageType: "gp3",
   environmentName: "dev",
   region: "ap-northeast-1",
   vpcCidr: "10.10.0.0/16",
