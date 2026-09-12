@@ -29,6 +29,10 @@ interface DatabaseStackProps extends StackProps {
 }
 
 export class DatabaseStack extends Stack {
+  public readonly databaseEndpointAddress: string;
+  public readonly databaseEndpointPort: string;
+  public readonly masterUserSecretArn: string;
+
   constructor(scope: Construct, id: string, props: DatabaseStackProps) {
     super(scope, id, props);
 
@@ -89,5 +93,10 @@ export class DatabaseStack extends Stack {
     databaseInstance.node.addDependency(databaseLogGroup);
 
     databaseInstance.applyRemovalPolicy(props.databaseRemovalPolicy);
+
+    this.databaseEndpointAddress = databaseInstance.attrEndpointAddress;
+    this.databaseEndpointPort = databaseInstance.attrEndpointPort;
+    this.masterUserSecretArn =
+      databaseInstance.attrMasterUserSecretSecretArn;
   }
 }
