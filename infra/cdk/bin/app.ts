@@ -21,6 +21,8 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 
 new DatabaseStack(app, "DevDatabaseStack", {
   applicationName: devConfig.applicationName,
+  databaseEngineVersion: devConfig.databaseEngineVersion,
+  databaseInstanceClass: devConfig.databaseInstanceClass,
   databaseSubnetIds: networkStack.databaseSubnetIds,
   env: {
     region: devConfig.region,
