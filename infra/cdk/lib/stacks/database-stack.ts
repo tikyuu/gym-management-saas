@@ -8,6 +8,8 @@ import { Construct } from "constructs";
 
 interface DatabaseStackProps extends StackProps {
   applicationName: string;
+  databaseEngineVersion: string;
+  databaseInstanceClass: string;
   databaseSubnetIds: string[];
   environmentName: string;
   rdsSecurityGroup: ec2.ISecurityGroup;
