@@ -30,5 +30,11 @@ export class SecurityGroupConstruct extends Construct {
       securityGroupName: `${props.resourceNamePrefix}-ecs-sg`,
       vpc: props.vpc,
     });
+
+    this.ecsSecurityGroup.addIngressRule(
+      this.albSecurityGroup,
+      ec2.Port.tcp(8000),
+      "Allow traffic from the internal ALB",
+    );
   }
 }
