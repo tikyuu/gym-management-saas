@@ -18,6 +18,8 @@ interface NetworkStackProps extends StackProps {
 }
 
 export class NetworkStack extends Stack {
+  public readonly vpc: ec2.IVpc;
+
   constructor(scope: Construct, id: string, props: NetworkStackProps) {
     super(scope, id, props);
 
@@ -28,7 +30,7 @@ export class NetworkStack extends Stack {
     Tags.of(this).add("managed-by", "aws-cdk");
     Tags.of(this).add("component", "network");
 
-    const vpc = new ec2.Vpc(this, "Vpc", {
+    this.vpc = new ec2.Vpc(this, "Vpc", {
       ipAddresses: ec2.IpAddresses.cidr(props.vpcCidr),
       natGateways: 0,
       subnetConfiguration: [],
@@ -36,12 +38,12 @@ export class NetworkStack extends Stack {
     });
 
     const securityGroups = new SecurityGroupConstruct(this, "SecurityGroups", {
-      vpc,
+      vpc: this.vpc,
       resourceNamePrefix,
     });
 
     const publicNetwork = new PublicNetworkConstruct(this, "PublicNetwork", {
-      vpcId: vpc.vpcId,
+      vpcId: this.vpc.vpcId,
       resourceNamePrefix,
       subnets: props.publicSubnets,
     });
@@ -50,7 +52,7 @@ export class NetworkStack extends Stack {
       this,
       "PrivateIngressNetwork",
       {
-        vpcId: vpc.vpcId,
+        vpcId: this.vpc.vpcId,
         resourceNamePrefix,
         subnets: props.privateIngressSubnets,
       },
@@ -60,7 +62,7 @@ export class NetworkStack extends Stack {
       this,
       "ApplicationNetwork",
       {
-        vpcId: vpc.vpcId,
+        vpcId: this.vpc.vpcId,
         resourceNamePrefix,
         subnets: props.applicationSubnets,
         natGatewayId: publicNetwork.natGateway.ref,
@@ -71,7 +73,7 @@ export class NetworkStack extends Stack {
       this,
       "DatabaseNetwork",
       {
-        vpcId: vpc.vpcId,
+        vpcId: this.vpc.vpcId,
         resourceNamePrefix,
         subnets: props.databaseSubnets,
       },
