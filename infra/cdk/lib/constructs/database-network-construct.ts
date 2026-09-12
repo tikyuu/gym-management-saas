@@ -9,7 +9,7 @@ interface DatabaseNetworkConstructProps {
 }
 
 export class DatabaseNetworkConstruct extends Construct {
-  public readonly routeTable: ec2.CfnRouteTable;
+  public readonly subnets: ec2.CfnSubnet[];
 
   constructor(
     scope: Construct,
@@ -18,7 +18,7 @@ export class DatabaseNetworkConstruct extends Construct {
   ) {
     super(scope, id);
 
-    this.routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
+    const routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
       tags: [
         {
           key: "Name",
@@ -26,6 +26,32 @@ export class DatabaseNetworkConstruct extends Construct {
         },
       ],
       vpcId: props.vpcId,
+    });
+
+    this.subnets = props.subnets.map((subnet) => {
+      const databaseSubnet = new ec2.CfnSubnet(this, subnet.id, {
+        availabilityZone: subnet.availabilityZone,
+        cidrBlock: subnet.cidrBlock,
+        mapPublicIpOnLaunch: false,
+        tags: [
+          {
+            key: "Name",
+            value: `${props.resourceNamePrefix}-${subnet.name}`,
+          },
+        ],
+        vpcId: props.vpcId,
+      });
+
+      new ec2.CfnSubnetRouteTableAssociation(
+        this,
+        `${subnet.id}RouteTableAssociation`,
+        {
+          routeTableId: routeTable.ref,
+          subnetId: databaseSubnet.ref,
+        },
+      );
+
+      return databaseSubnet;
     });
   }
 }
