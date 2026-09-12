@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
+import { AuthenticationStack } from "../lib/stacks/authentication-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
 
 const app = new cdk.App();
+
+new AuthenticationStack(app, "DevAuthenticationStack", {
+  env: {
+    region: devConfig.region,
+  },
+});
 
 const networkStack = new NetworkStack(app, "DevNetworkStack", {
   env: {
