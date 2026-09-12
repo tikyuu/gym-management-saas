@@ -20,10 +20,12 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 });
 
 new DatabaseStack(app, "DevDatabaseStack", {
+  applicationName: devConfig.applicationName,
   databaseSubnetIds: networkStack.databaseSubnetIds,
   env: {
     region: devConfig.region,
   },
+  environmentName: devConfig.environmentName,
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
   vpc: networkStack.vpc,
 });
