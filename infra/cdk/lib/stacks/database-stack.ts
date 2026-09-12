@@ -8,9 +8,13 @@ import { Construct } from "constructs";
 
 interface DatabaseStackProps extends StackProps {
   applicationName: string;
+  databaseAllocatedStorage: number;
   databaseEngineVersion: string;
   databaseInstanceClass: string;
+  databaseMaxAllocatedStorage: number;
+  databaseMultiAz: boolean;
   databaseSubnetIds: string[];
+  databaseStorageType: string;
   environmentName: string;
   rdsSecurityGroup: ec2.ISecurityGroup;
   vpc: ec2.IVpc;
@@ -22,16 +26,36 @@ export class DatabaseStack extends Stack {
 
     const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
 
-    new rds.CfnDBSubnetGroup(this, "DatabaseSubnetGroup", {
-      dbSubnetGroupDescription: "Subnet group for the RDS database",
-      dbSubnetGroupName: `${resourceNamePrefix}-db-subnet-group`,
-      subnetIds: props.databaseSubnetIds,
-      tags: [
-        {
-          key: "Name",
-          value: `${resourceNamePrefix}-db-subnet-group`,
-        },
-      ],
+    const databaseSubnetGroup = new rds.CfnDBSubnetGroup(
+      this,
+      "DatabaseSubnetGroup",
+      {
+        dbSubnetGroupDescription: "Subnet group for the RDS database",
+        dbSubnetGroupName: `${resourceNamePrefix}-db-subnet-group`,
+        subnetIds: props.databaseSubnetIds,
+        tags: [
+          {
+            key: "Name",
+            value: `${resourceNamePrefix}-db-subnet-group`,
+          },
+        ],
+      },
+    );
+
+    new rds.CfnDBInstance(this, "DatabaseInstance", {
+      allocatedStorage: props.databaseAllocatedStorage.toString(),
+      dbInstanceClass: props.databaseInstanceClass,
+      dbSubnetGroupName: databaseSubnetGroup.ref,
+      engine: "postgres",
+      engineVersion: props.databaseEngineVersion,
+      manageMasterUserPassword: true,
+      masterUsername: "db_admin",
+      maxAllocatedStorage: props.databaseMaxAllocatedStorage,
+      multiAz: props.databaseMultiAz,
+      publiclyAccessible: false,
+      storageType: props.databaseStorageType,
+      storageEncrypted: true,
+      vpcSecurityGroups: [props.rdsSecurityGroup.securityGroupId],
     });
   }
 }
