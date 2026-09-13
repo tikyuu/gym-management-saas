@@ -19,6 +19,7 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   removalPolicy: devConfig.authenticationRemovalPolicy,
   staffOAuthCallbackUrls: devConfig.staffOAuthCallbackUrls,
   staffOAuthLogoutUrls: devConfig.staffOAuthLogoutUrls,
+  staffUserPoolDomainPrefix: devConfig.staffUserPoolDomainPrefix,
   userPoolDeletionProtection:
     devConfig.authenticationUserPoolDeletionProtection,
 });

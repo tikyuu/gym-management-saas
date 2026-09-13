@@ -18,6 +18,7 @@ interface AuthenticationStackProps extends StackProps {
   removalPolicy: RemovalPolicy;
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
+  staffUserPoolDomainPrefix: string;
   userPoolDeletionProtection: boolean;
 }
 
@@ -61,6 +62,7 @@ export class AuthenticationStack extends Stack {
         resourceNamePrefix,
         staffOAuthCallbackUrls: props.staffOAuthCallbackUrls,
         staffOAuthLogoutUrls: props.staffOAuthLogoutUrls,
+        staffUserPoolDomainPrefix: props.staffUserPoolDomainPrefix,
         userPoolDeletionProtection: props.userPoolDeletionProtection,
       },
     );
