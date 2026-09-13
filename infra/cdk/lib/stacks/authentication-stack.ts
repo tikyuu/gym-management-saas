@@ -8,6 +8,7 @@ import {
 import { Construct } from "constructs";
 import { CustomerAuthenticationConstruct } from "../constructs/authentication/customer-authentication-construct";
 import { StaffAuthenticationConstruct } from "../constructs/authentication/staff-authentication-construct";
+import { SystemAdminAuthenticationConstruct } from "../constructs/authentication/system-admin-authentication-construct";
 
 interface AuthenticationStackProps extends StackProps {
   applicationName: string;
@@ -27,6 +28,7 @@ export class AuthenticationStack extends Stack {
   public readonly customerUserPool: cognito.IUserPool;
   public readonly staffAppClient: cognito.IUserPoolClient;
   public readonly staffUserPool: cognito.IUserPool;
+  public readonly systemAdminUserPool: cognito.IUserPool;
 
   constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
     super(scope, id, props);
@@ -69,5 +71,17 @@ export class AuthenticationStack extends Stack {
 
     this.staffAppClient = staffAuthentication.appClient;
     this.staffUserPool = staffAuthentication.userPool;
+
+    const systemAdminAuthentication = new SystemAdminAuthenticationConstruct(
+      this,
+      "SystemAdminAuthentication",
+      {
+        removalPolicy: props.removalPolicy,
+        resourceNamePrefix,
+        userPoolDeletionProtection: props.userPoolDeletionProtection,
+      },
+    );
+
+    this.systemAdminUserPool = systemAdminAuthentication.userPool;
   }
 }
