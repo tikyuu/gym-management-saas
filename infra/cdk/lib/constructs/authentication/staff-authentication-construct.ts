@@ -8,6 +8,8 @@ import { Construct } from "constructs";
 interface StaffAuthenticationConstructProps {
   removalPolicy: RemovalPolicy;
   resourceNamePrefix: string;
+  staffOAuthCallbackUrls: string[];
+  staffOAuthLogoutUrls: string[];
   userPoolDeletionProtection: boolean;
 }
 
@@ -50,10 +52,18 @@ export class StaffAuthenticationConstruct extends Construct {
 
     this.appClient = new cognito.UserPoolClient(this, "StaffAppClient", {
       accessTokenValidity: Duration.minutes(60),
-      disableOAuth: true,
       enableTokenRevocation: true,
       generateSecret: false,
       idTokenValidity: Duration.minutes(60),
+      oAuth: {
+        callbackUrls: props.staffOAuthCallbackUrls,
+        flows: {
+          authorizationCodeGrant: true,
+          implicitCodeGrant: false,
+        },
+        logoutUrls: props.staffOAuthLogoutUrls,
+        scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL],
+      },
       preventUserExistenceErrors: true,
       refreshTokenRotationGracePeriod: Duration.seconds(10),
       refreshTokenValidity: Duration.hours(8),

@@ -7,6 +7,8 @@ export const devConfig = {
   customerOAuthCallbackUrls: ["http://localhost:5173/auth/callback"],
   customerOAuthLogoutUrls: ["http://localhost:5173"],
   customerUserPoolDomainPrefix: "gym-management-dev",
+  staffOAuthCallbackUrls: ["http://localhost:5173/staff/auth/callback"],
+  staffOAuthLogoutUrls: ["http://localhost:5173/staff"],
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
   databaseBackupRetentionPeriod: 1,

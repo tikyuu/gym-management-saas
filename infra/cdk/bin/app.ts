@@ -17,6 +17,8 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
     region: devConfig.region,
   },
   removalPolicy: devConfig.authenticationRemovalPolicy,
+  staffOAuthCallbackUrls: devConfig.staffOAuthCallbackUrls,
+  staffOAuthLogoutUrls: devConfig.staffOAuthLogoutUrls,
   userPoolDeletionProtection:
     devConfig.authenticationUserPoolDeletionProtection,
 });
