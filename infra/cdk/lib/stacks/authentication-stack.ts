@@ -22,6 +22,7 @@ interface AuthenticationStackProps extends StackProps {
 export class AuthenticationStack extends Stack {
   public readonly customerAppClient: cognito.IUserPoolClient;
   public readonly customerUserPool: cognito.IUserPool;
+  public readonly staffAppClient: cognito.IUserPoolClient;
   public readonly staffUserPool: cognito.IUserPool;
 
   constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
@@ -60,6 +61,7 @@ export class AuthenticationStack extends Stack {
       },
     );
 
+    this.staffAppClient = staffAuthentication.appClient;
     this.staffUserPool = staffAuthentication.userPool;
   }
 }
