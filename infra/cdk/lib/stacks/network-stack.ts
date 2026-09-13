@@ -18,7 +18,11 @@ interface NetworkStackProps extends StackProps {
 }
 
 export class NetworkStack extends Stack {
+  public readonly albSecurityGroup: ec2.ISecurityGroup;
+  public readonly applicationSubnetIds: string[];
   public readonly databaseSubnetIds: string[];
+  public readonly ecsSecurityGroup: ec2.ISecurityGroup;
+  public readonly internalAlbSubnetIds: string[];
   public readonly rdsSecurityGroup: ec2.ISecurityGroup;
   public readonly vpc: ec2.IVpc;
 
@@ -44,6 +48,8 @@ export class NetworkStack extends Stack {
       resourceNamePrefix,
     });
 
+    this.albSecurityGroup = securityGroups.albSecurityGroup;
+    this.ecsSecurityGroup = securityGroups.ecsSecurityGroup;
     this.rdsSecurityGroup = securityGroups.rdsSecurityGroup;
 
     const publicNetwork = new PublicNetworkConstruct(this, "PublicNetwork", {
@@ -83,6 +89,12 @@ export class NetworkStack extends Stack {
       },
     );
 
+    this.applicationSubnetIds = applicationNetwork.subnets.map(
+      (subnet) => subnet.ref,
+    );
+    this.internalAlbSubnetIds = internalAlbNetwork.subnets.map(
+      (subnet) => subnet.ref,
+    );
     this.databaseSubnetIds = databaseNetwork.subnets.map(
       (subnet) => subnet.ref,
     );
