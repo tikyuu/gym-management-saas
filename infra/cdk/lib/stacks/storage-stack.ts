@@ -1,5 +1,6 @@
 import {
   Aws,
+  Duration,
   RemovalPolicy,
   Stack,
   StackProps,
@@ -35,6 +36,11 @@ export class StorageStack extends Stack {
       bucketName: `${resourceNamePrefix}-${Aws.ACCOUNT_ID}-frontend-s3`,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
+      lifecycleRules: [
+        {
+          abortIncompleteMultipartUploadAfter: Duration.days(7),
+        },
+      ],
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       removalPolicy: props.frontendBucketRemovalPolicy,
       versioned: props.frontendBucketVersioned,
