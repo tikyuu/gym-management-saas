@@ -22,6 +22,7 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   staffUserPoolDomainPrefix: devConfig.staffUserPoolDomainPrefix,
   systemAdminOAuthCallbackUrls: devConfig.systemAdminOAuthCallbackUrls,
   systemAdminOAuthLogoutUrls: devConfig.systemAdminOAuthLogoutUrls,
+  systemAdminUserPoolDomainPrefix: devConfig.systemAdminUserPoolDomainPrefix,
   userPoolDeletionProtection:
     devConfig.authenticationUserPoolDeletionProtection,
 });

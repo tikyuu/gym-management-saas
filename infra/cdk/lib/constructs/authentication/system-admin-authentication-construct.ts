@@ -10,6 +10,7 @@ interface SystemAdminAuthenticationConstructProps {
   resourceNamePrefix: string;
   systemAdminOAuthCallbackUrls: string[];
   systemAdminOAuthLogoutUrls: string[];
+  systemAdminUserPoolDomainPrefix: string;
   userPoolDeletionProtection: boolean;
 }
 
@@ -48,6 +49,13 @@ export class SystemAdminAuthenticationConstruct extends Construct {
       },
       signInCaseSensitive: false,
       userPoolName: `${props.resourceNamePrefix}-system-admin-user-pool`,
+    });
+
+    this.userPool.addDomain("SystemAdminUserPoolDomain", {
+      cognitoDomain: {
+        domainPrefix: props.systemAdminUserPoolDomainPrefix,
+      },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
 
     this.appClient = new cognito.UserPoolClient(

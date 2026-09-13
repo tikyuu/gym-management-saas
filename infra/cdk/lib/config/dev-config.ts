@@ -14,6 +14,7 @@ export const devConfig = {
     "http://localhost:5173/system-admin/auth/callback",
   ],
   systemAdminOAuthLogoutUrls: ["http://localhost:5173/system-admin"],
+  systemAdminUserPoolDomainPrefix: "gym-management-dev-system-admin",
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
   databaseBackupRetentionPeriod: 1,
