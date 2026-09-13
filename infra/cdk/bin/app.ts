@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
+import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
 import { StorageStack } from "../lib/stacks/storage-stack";
@@ -26,6 +27,14 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   systemAdminUserPoolDomainPrefix: devConfig.systemAdminUserPoolDomainPrefix,
   userPoolDeletionProtection:
     devConfig.authenticationUserPoolDeletionProtection,
+});
+
+new ContainerRegistryStack(app, "DevContainerRegistryStack", {
+  applicationName: devConfig.applicationName,
+  environmentName: devConfig.environmentName,
+  env: {
+    region: devConfig.region,
+  },
 });
 
 const networkStack = new NetworkStack(app, "DevNetworkStack", {
