@@ -51,12 +51,15 @@ export class SystemAdminAuthenticationConstruct extends Construct {
       userPoolName: `${props.resourceNamePrefix}-system-admin-user-pool`,
     });
 
-    this.userPool.addDomain("SystemAdminUserPoolDomain", {
-      cognitoDomain: {
-        domainPrefix: props.systemAdminUserPoolDomainPrefix,
+    const userPoolDomain = this.userPool.addDomain(
+      "SystemAdminUserPoolDomain",
+      {
+        cognitoDomain: {
+          domainPrefix: props.systemAdminUserPoolDomainPrefix,
+        },
+        managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
       },
-      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
-    });
+    );
 
     this.appClient = new cognito.UserPoolClient(
       this,
@@ -82,5 +85,17 @@ export class SystemAdminAuthenticationConstruct extends Construct {
         userPoolClientName: `${props.resourceNamePrefix}-system-admin-app-client`,
       },
     );
+
+    const managedLoginBranding = new cognito.CfnManagedLoginBranding(
+      this,
+      "SystemAdminManagedLoginBranding",
+      {
+        clientId: this.appClient.userPoolClientId,
+        useCognitoProvidedValues: true,
+        userPoolId: this.userPool.userPoolId,
+      },
+    );
+
+    managedLoginBranding.node.addDependency(userPoolDomain);
   }
 }
