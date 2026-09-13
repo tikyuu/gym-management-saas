@@ -10,6 +10,7 @@ interface StaffAuthenticationConstructProps {
   resourceNamePrefix: string;
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
+  staffUserPoolDomainPrefix: string;
   userPoolDeletionProtection: boolean;
 }
 
@@ -48,6 +49,13 @@ export class StaffAuthenticationConstruct extends Construct {
       },
       signInCaseSensitive: false,
       userPoolName: `${props.resourceNamePrefix}-staff-user-pool`,
+    });
+
+    this.userPool.addDomain("StaffUserPoolDomain", {
+      cognitoDomain: {
+        domainPrefix: props.staffUserPoolDomainPrefix,
+      },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
 
     this.appClient = new cognito.UserPoolClient(this, "StaffAppClient", {
