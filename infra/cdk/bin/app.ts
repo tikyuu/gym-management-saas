@@ -9,6 +9,8 @@ const app = new cdk.App();
 
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
+  customerOAuthCallbackUrls: devConfig.customerOAuthCallbackUrls,
+  customerOAuthLogoutUrls: devConfig.customerOAuthLogoutUrls,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,

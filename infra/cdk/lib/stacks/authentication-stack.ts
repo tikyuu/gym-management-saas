@@ -10,6 +10,8 @@ import { Construct } from "constructs";
 
 interface AuthenticationStackProps extends StackProps {
   applicationName: string;
+  customerOAuthCallbackUrls: string[];
+  customerOAuthLogoutUrls: string[];
   environmentName: string;
   removalPolicy: RemovalPolicy;
   userPoolDeletionProtection: boolean;
@@ -63,10 +65,18 @@ export class AuthenticationStack extends Stack {
       "CustomerAppClient",
       {
         accessTokenValidity: Duration.minutes(60),
-        disableOAuth: true,
         enableTokenRevocation: true,
         generateSecret: false,
         idTokenValidity: Duration.minutes(60),
+        oAuth: {
+          callbackUrls: props.customerOAuthCallbackUrls,
+          flows: {
+            authorizationCodeGrant: true,
+            implicitCodeGrant: false,
+          },
+          logoutUrls: props.customerOAuthLogoutUrls,
+          scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL],
+        },
         preventUserExistenceErrors: true,
         refreshTokenRotationGracePeriod: Duration.seconds(10),
         refreshTokenValidity: Duration.days(30),
