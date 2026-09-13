@@ -28,6 +28,7 @@ export class AuthenticationStack extends Stack {
   public readonly customerUserPool: cognito.IUserPool;
   public readonly staffAppClient: cognito.IUserPoolClient;
   public readonly staffUserPool: cognito.IUserPool;
+  public readonly systemAdminAppClient: cognito.IUserPoolClient;
   public readonly systemAdminUserPool: cognito.IUserPool;
 
   constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
@@ -82,6 +83,7 @@ export class AuthenticationStack extends Stack {
       },
     );
 
+    this.systemAdminAppClient = systemAdminAuthentication.appClient;
     this.systemAdminUserPool = systemAdminAuthentication.userPool;
   }
 }

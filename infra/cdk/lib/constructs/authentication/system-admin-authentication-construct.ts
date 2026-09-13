@@ -12,6 +12,7 @@ interface SystemAdminAuthenticationConstructProps {
 }
 
 export class SystemAdminAuthenticationConstruct extends Construct {
+  public readonly appClient: cognito.IUserPoolClient;
   public readonly userPool: cognito.IUserPool;
 
   constructor(
@@ -46,5 +47,22 @@ export class SystemAdminAuthenticationConstruct extends Construct {
       signInCaseSensitive: false,
       userPoolName: `${props.resourceNamePrefix}-system-admin-user-pool`,
     });
+
+    this.appClient = new cognito.UserPoolClient(
+      this,
+      "SystemAdminAppClient",
+      {
+        accessTokenValidity: Duration.minutes(60),
+        disableOAuth: true,
+        enableTokenRevocation: true,
+        generateSecret: false,
+        idTokenValidity: Duration.minutes(60),
+        preventUserExistenceErrors: true,
+        refreshTokenRotationGracePeriod: Duration.seconds(10),
+        refreshTokenValidity: Duration.hours(8),
+        userPool: this.userPool,
+        userPoolClientName: `${props.resourceNamePrefix}-system-admin-app-client`,
+      },
+    );
   }
 }
