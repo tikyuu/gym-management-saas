@@ -8,6 +8,8 @@ import { Construct } from "constructs";
 interface SystemAdminAuthenticationConstructProps {
   removalPolicy: RemovalPolicy;
   resourceNamePrefix: string;
+  systemAdminOAuthCallbackUrls: string[];
+  systemAdminOAuthLogoutUrls: string[];
   userPoolDeletionProtection: boolean;
 }
 
@@ -53,10 +55,18 @@ export class SystemAdminAuthenticationConstruct extends Construct {
       "SystemAdminAppClient",
       {
         accessTokenValidity: Duration.minutes(60),
-        disableOAuth: true,
         enableTokenRevocation: true,
         generateSecret: false,
         idTokenValidity: Duration.minutes(60),
+        oAuth: {
+          callbackUrls: props.systemAdminOAuthCallbackUrls,
+          flows: {
+            authorizationCodeGrant: true,
+            implicitCodeGrant: false,
+          },
+          logoutUrls: props.systemAdminOAuthLogoutUrls,
+          scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL],
+        },
         preventUserExistenceErrors: true,
         refreshTokenRotationGracePeriod: Duration.seconds(10),
         refreshTokenValidity: Duration.hours(8),
