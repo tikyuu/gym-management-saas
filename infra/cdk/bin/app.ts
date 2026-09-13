@@ -31,6 +31,8 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
 
 new ContainerRegistryStack(app, "DevContainerRegistryStack", {
   applicationName: devConfig.applicationName,
+  apiRepositoryEmptyOnDelete: devConfig.apiRepositoryEmptyOnDelete,
+  apiRepositoryRemovalPolicy: devConfig.apiRepositoryRemovalPolicy,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,

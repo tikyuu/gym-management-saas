@@ -1,8 +1,16 @@
-import { Stack, StackProps, Tags, aws_ecr as ecr } from "aws-cdk-lib";
+import {
+  RemovalPolicy,
+  Stack,
+  StackProps,
+  Tags,
+  aws_ecr as ecr,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface ContainerRegistryStackProps extends StackProps {
   applicationName: string;
+  apiRepositoryEmptyOnDelete: boolean;
+  apiRepositoryRemovalPolicy: RemovalPolicy;
   environmentName: string;
 }
 
@@ -24,8 +32,10 @@ export class ContainerRegistryStack extends Stack {
     Tags.of(this).add("component", "container-registry");
 
     this.repository = new ecr.Repository(this, "ApiRepository", {
+      emptyOnDelete: props.apiRepositoryEmptyOnDelete,
       imageScanOnPush: true,
       imageTagMutability: ecr.TagMutability.IMMUTABLE,
+      removalPolicy: props.apiRepositoryRemovalPolicy,
       repositoryName: `${resourceNamePrefix}-api-ecr`,
     });
   }
