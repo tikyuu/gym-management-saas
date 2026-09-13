@@ -1,4 +1,4 @@
-import { Stack, StackProps, Tags } from "aws-cdk-lib";
+import { Aws, Stack, StackProps, Tags, aws_s3 as s3 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface StorageStackProps extends StackProps {
@@ -7,6 +7,8 @@ interface StorageStackProps extends StackProps {
 }
 
 export class StorageStack extends Stack {
+  public readonly frontendBucket: s3.IBucket;
+
   constructor(scope: Construct, id: string, props: StorageStackProps) {
     super(scope, id, props);
 
@@ -16,5 +18,13 @@ export class StorageStack extends Stack {
     Tags.of(this).add("environment", props.environmentName);
     Tags.of(this).add("managed-by", "aws-cdk");
     Tags.of(this).add("component", "storage");
+
+    this.frontendBucket = new s3.Bucket(this, "FrontendBucket", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      bucketName: `${resourceNamePrefix}-${Aws.ACCOUNT_ID}-frontend-s3`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+    });
   }
 }

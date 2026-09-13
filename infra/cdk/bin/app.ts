@@ -4,6 +4,7 @@ import { devConfig } from "../lib/config/dev-config";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
+import { StorageStack } from "../lib/stacks/storage-stack";
 
 const app = new cdk.App();
 
@@ -61,6 +62,14 @@ new DatabaseStack(app, "DevDatabaseStack", {
   },
   environmentName: devConfig.environmentName,
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
+});
+
+new StorageStack(app, "DevStorageStack", {
+  applicationName: devConfig.applicationName,
+  environmentName: devConfig.environmentName,
+  env: {
+    region: devConfig.region,
+  },
 });
 
 app.synth();
