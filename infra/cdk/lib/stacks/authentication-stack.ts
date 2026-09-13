@@ -16,6 +16,7 @@ interface AuthenticationStackProps extends StackProps {
 }
 
 export class AuthenticationStack extends Stack {
+  public readonly customerAppClient: cognito.IUserPoolClient;
   public readonly customerUserPool: cognito.IUserPool;
 
   constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
@@ -56,5 +57,22 @@ export class AuthenticationStack extends Stack {
       signInCaseSensitive: false,
       userPoolName: `${resourceNamePrefix}-customer-user-pool`,
     });
+
+    this.customerAppClient = new cognito.UserPoolClient(
+      this,
+      "CustomerAppClient",
+      {
+        accessTokenValidity: Duration.minutes(60),
+        disableOAuth: true,
+        enableTokenRevocation: true,
+        generateSecret: false,
+        idTokenValidity: Duration.minutes(60),
+        preventUserExistenceErrors: true,
+        refreshTokenRotationGracePeriod: Duration.seconds(10),
+        refreshTokenValidity: Duration.days(30),
+        userPool: this.customerUserPool,
+        userPoolClientName: `${resourceNamePrefix}-customer-app-client`,
+      },
+    );
   }
 }
