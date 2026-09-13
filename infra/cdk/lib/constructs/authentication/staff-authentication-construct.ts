@@ -51,7 +51,7 @@ export class StaffAuthenticationConstruct extends Construct {
       userPoolName: `${props.resourceNamePrefix}-staff-user-pool`,
     });
 
-    this.userPool.addDomain("StaffUserPoolDomain", {
+    const userPoolDomain = this.userPool.addDomain("StaffUserPoolDomain", {
       cognitoDomain: {
         domainPrefix: props.staffUserPoolDomainPrefix,
       },
@@ -78,5 +78,17 @@ export class StaffAuthenticationConstruct extends Construct {
       userPool: this.userPool,
       userPoolClientName: `${props.resourceNamePrefix}-staff-app-client`,
     });
+
+    const managedLoginBranding = new cognito.CfnManagedLoginBranding(
+      this,
+      "StaffManagedLoginBranding",
+      {
+        clientId: this.appClient.userPoolClientId,
+        useCognitoProvidedValues: true,
+        userPoolId: this.userPool.userPoolId,
+      },
+    );
+
+    managedLoginBranding.node.addDependency(userPoolDomain);
   }
 }
