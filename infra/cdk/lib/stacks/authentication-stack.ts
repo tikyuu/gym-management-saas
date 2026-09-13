@@ -7,6 +7,7 @@ import {
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { CustomerAuthenticationConstruct } from "../constructs/authentication/customer-authentication-construct";
+import { StaffAuthenticationConstruct } from "../constructs/authentication/staff-authentication-construct";
 
 interface AuthenticationStackProps extends StackProps {
   applicationName: string;
@@ -21,6 +22,7 @@ interface AuthenticationStackProps extends StackProps {
 export class AuthenticationStack extends Stack {
   public readonly customerAppClient: cognito.IUserPoolClient;
   public readonly customerUserPool: cognito.IUserPool;
+  public readonly staffUserPool: cognito.IUserPool;
 
   constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
     super(scope, id, props);
@@ -47,5 +49,17 @@ export class AuthenticationStack extends Stack {
 
     this.customerAppClient = customerAuthentication.appClient;
     this.customerUserPool = customerAuthentication.userPool;
+
+    const staffAuthentication = new StaffAuthenticationConstruct(
+      this,
+      "StaffAuthentication",
+      {
+        removalPolicy: props.removalPolicy,
+        resourceNamePrefix,
+        userPoolDeletionProtection: props.userPoolDeletionProtection,
+      },
+    );
+
+    this.staffUserPool = staffAuthentication.userPool;
   }
 }
