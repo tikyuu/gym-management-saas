@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
+import { ComputeStack } from "../lib/stacks/compute-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
@@ -50,6 +51,14 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
   privateIngressSubnets: devConfig.privateIngressSubnets,
   applicationSubnets: devConfig.applicationSubnets,
   databaseSubnets: devConfig.databaseSubnets,
+});
+
+new ComputeStack(app, "DevComputeStack", {
+  applicationName: devConfig.applicationName,
+  environmentName: devConfig.environmentName,
+  env: {
+    region: devConfig.region,
+  },
 });
 
 new DatabaseStack(app, "DevDatabaseStack", {
