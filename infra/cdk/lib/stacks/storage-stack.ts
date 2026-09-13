@@ -1,9 +1,19 @@
-import { Aws, Stack, StackProps, Tags, aws_s3 as s3 } from "aws-cdk-lib";
+import {
+  Aws,
+  RemovalPolicy,
+  Stack,
+  StackProps,
+  Tags,
+  aws_s3 as s3,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface StorageStackProps extends StackProps {
   applicationName: string;
   environmentName: string;
+  frontendBucketAutoDeleteObjects: boolean;
+  frontendBucketRemovalPolicy: RemovalPolicy;
+  frontendBucketVersioned: boolean;
 }
 
 export class StorageStack extends Stack {
@@ -20,11 +30,14 @@ export class StorageStack extends Stack {
     Tags.of(this).add("component", "storage");
 
     this.frontendBucket = new s3.Bucket(this, "FrontendBucket", {
+      autoDeleteObjects: props.frontendBucketAutoDeleteObjects,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       bucketName: `${resourceNamePrefix}-${Aws.ACCOUNT_ID}-frontend-s3`,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      removalPolicy: props.frontendBucketRemovalPolicy,
+      versioned: props.frontendBucketVersioned,
     });
   }
 }

@@ -70,6 +70,10 @@ new StorageStack(app, "DevStorageStack", {
   env: {
     region: devConfig.region,
   },
+  frontendBucketAutoDeleteObjects:
+    devConfig.frontendBucketAutoDeleteObjects,
+  frontendBucketRemovalPolicy: devConfig.frontendBucketRemovalPolicy,
+  frontendBucketVersioned: devConfig.frontendBucketVersioned,
 });
 
 app.synth();
