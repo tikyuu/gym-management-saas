@@ -65,6 +65,7 @@ export class AuthenticationStack extends Stack {
       cognitoDomain: {
         domainPrefix: props.customerUserPoolDomainPrefix,
       },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
 
     this.customerAppClient = new cognito.UserPoolClient(
