@@ -1,8 +1,60 @@
-import { Stack, StackProps } from "aws-cdk-lib";
+import {
+  Duration,
+  RemovalPolicy,
+  Stack,
+  StackProps,
+  Tags,
+  aws_cognito as cognito,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 
+interface AuthenticationStackProps extends StackProps {
+  applicationName: string;
+  environmentName: string;
+  removalPolicy: RemovalPolicy;
+  userPoolDeletionProtection: boolean;
+}
+
 export class AuthenticationStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  public readonly customerUserPool: cognito.IUserPool;
+
+  constructor(scope: Construct, id: string, props: AuthenticationStackProps) {
     super(scope, id, props);
+
+    const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
+
+    Tags.of(this).add("application", props.applicationName);
+    Tags.of(this).add("environment", props.environmentName);
+    Tags.of(this).add("managed-by", "aws-cdk");
+    Tags.of(this).add("component", "authentication");
+
+    this.customerUserPool = new cognito.UserPool(this, "CustomerUserPool", {
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      autoVerify: {
+        email: true,
+      },
+      deletionProtection: props.userPoolDeletionProtection,
+      featurePlan: cognito.FeaturePlan.ESSENTIALS,
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {
+        otp: true,
+        sms: false,
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireDigits: true,
+        requireLowercase: true,
+        requireSymbols: true,
+        requireUppercase: true,
+        tempPasswordValidity: Duration.days(7),
+      },
+      removalPolicy: props.removalPolicy,
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      signInCaseSensitive: false,
+      userPoolName: `${resourceNamePrefix}-customer-user-pool`,
+    });
   }
 }

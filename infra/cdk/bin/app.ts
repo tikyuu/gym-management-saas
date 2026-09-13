@@ -8,9 +8,14 @@ import { NetworkStack } from "../lib/stacks/network-stack";
 const app = new cdk.App();
 
 new AuthenticationStack(app, "DevAuthenticationStack", {
+  applicationName: devConfig.applicationName,
+  environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,
   },
+  removalPolicy: devConfig.authenticationRemovalPolicy,
+  userPoolDeletionProtection:
+    devConfig.authenticationUserPoolDeletionProtection,
 });
 
 const networkStack = new NetworkStack(app, "DevNetworkStack", {
