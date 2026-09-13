@@ -4,6 +4,8 @@ export const devConfig = {
   applicationName: "gym-management",
   authenticationRemovalPolicy: RemovalPolicy.DESTROY,
   authenticationUserPoolDeletionProtection: false,
+  customerOAuthCallbackUrls: ["http://localhost:5173/auth/callback"],
+  customerOAuthLogoutUrls: ["http://localhost:5173"],
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
   databaseBackupRetentionPeriod: 1,
