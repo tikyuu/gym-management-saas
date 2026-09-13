@@ -2,6 +2,8 @@ import { RemovalPolicy } from "aws-cdk-lib";
 
 export const devConfig = {
   applicationName: "gym-management",
+  authenticationRemovalPolicy: RemovalPolicy.DESTROY,
+  authenticationUserPoolDeletionProtection: false,
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
   databaseBackupRetentionPeriod: 1,
