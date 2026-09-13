@@ -2,6 +2,8 @@ import { RemovalPolicy } from "aws-cdk-lib";
 
 export const devConfig = {
   applicationName: "gym-management",
+  apiRepositoryEmptyOnDelete: true,
+  apiRepositoryRemovalPolicy: RemovalPolicy.DESTROY,
   authenticationRemovalPolicy: RemovalPolicy.DESTROY,
   authenticationUserPoolDeletionProtection: false,
   customerOAuthCallbackUrls: ["http://localhost:5173/auth/callback"],
