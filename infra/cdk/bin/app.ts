@@ -11,6 +11,7 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
   customerOAuthCallbackUrls: devConfig.customerOAuthCallbackUrls,
   customerOAuthLogoutUrls: devConfig.customerOAuthLogoutUrls,
+  customerUserPoolDomainPrefix: devConfig.customerUserPoolDomainPrefix,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,
