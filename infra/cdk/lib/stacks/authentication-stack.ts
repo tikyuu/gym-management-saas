@@ -12,6 +12,7 @@ interface AuthenticationStackProps extends StackProps {
   applicationName: string;
   customerOAuthCallbackUrls: string[];
   customerOAuthLogoutUrls: string[];
+  customerUserPoolDomainPrefix: string;
   environmentName: string;
   removalPolicy: RemovalPolicy;
   userPoolDeletionProtection: boolean;
@@ -58,6 +59,12 @@ export class AuthenticationStack extends Stack {
       },
       signInCaseSensitive: false,
       userPoolName: `${resourceNamePrefix}-customer-user-pool`,
+    });
+
+    this.customerUserPool.addDomain("CustomerUserPoolDomain", {
+      cognitoDomain: {
+        domainPrefix: props.customerUserPoolDomainPrefix,
+      },
     });
 
     this.customerAppClient = new cognito.UserPoolClient(
