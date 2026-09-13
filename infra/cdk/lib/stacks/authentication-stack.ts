@@ -61,12 +61,15 @@ export class AuthenticationStack extends Stack {
       userPoolName: `${resourceNamePrefix}-customer-user-pool`,
     });
 
-    this.customerUserPool.addDomain("CustomerUserPoolDomain", {
-      cognitoDomain: {
-        domainPrefix: props.customerUserPoolDomainPrefix,
+    const customerUserPoolDomain = this.customerUserPool.addDomain(
+      "CustomerUserPoolDomain",
+      {
+        cognitoDomain: {
+          domainPrefix: props.customerUserPoolDomainPrefix,
+        },
+        managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
       },
-      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
-    });
+    );
 
     this.customerAppClient = new cognito.UserPoolClient(
       this,
@@ -92,5 +95,17 @@ export class AuthenticationStack extends Stack {
         userPoolClientName: `${resourceNamePrefix}-customer-app-client`,
       },
     );
+
+    const customerManagedLoginBranding = new cognito.CfnManagedLoginBranding(
+      this,
+      "CustomerManagedLoginBranding",
+      {
+        clientId: this.customerAppClient.userPoolClientId,
+        useCognitoProvidedValues: true,
+        userPoolId: this.customerUserPool.userPoolId,
+      },
+    );
+
+    customerManagedLoginBranding.node.addDependency(customerUserPoolDomain);
   }
 }
