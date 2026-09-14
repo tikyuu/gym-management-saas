@@ -10,6 +10,8 @@ import { Construct } from "constructs";
 interface ComputeStackProps extends StackProps {
   applicationName: string;
   environmentName: string;
+  taskCpu: number;
+  taskMemoryMiB: number;
   vpc: ec2.IVpc;
 }
 

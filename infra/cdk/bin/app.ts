@@ -30,15 +30,19 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
     devConfig.authenticationUserPoolDeletionProtection,
 });
 
-new ContainerRegistryStack(app, "DevContainerRegistryStack", {
-  applicationName: devConfig.applicationName,
-  apiRepositoryEmptyOnDelete: devConfig.apiRepositoryEmptyOnDelete,
-  apiRepositoryRemovalPolicy: devConfig.apiRepositoryRemovalPolicy,
-  environmentName: devConfig.environmentName,
-  env: {
-    region: devConfig.region,
+const containerRegistryStack = new ContainerRegistryStack(
+  app,
+  "DevContainerRegistryStack",
+  {
+    applicationName: devConfig.applicationName,
+    apiRepositoryEmptyOnDelete: devConfig.apiRepositoryEmptyOnDelete,
+    apiRepositoryRemovalPolicy: devConfig.apiRepositoryRemovalPolicy,
+    environmentName: devConfig.environmentName,
+    env: {
+      region: devConfig.region,
+    },
   },
-});
+);
 
 const networkStack = new NetworkStack(app, "DevNetworkStack", {
   env: {
@@ -59,6 +63,8 @@ new ComputeStack(app, "DevComputeStack", {
   env: {
     region: devConfig.region,
   },
+  taskCpu: devConfig.apiTaskCpu,
+  taskMemoryMiB: devConfig.apiTaskMemoryMiB,
   vpc: networkStack.vpc,
 });
 
