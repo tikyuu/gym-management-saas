@@ -59,6 +59,9 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 
 new ComputeStack(app, "DevComputeStack", {
   applicationName: devConfig.applicationName,
+  applicationSubnetIds: networkStack.applicationSubnetIds,
+  apiDesiredCount: devConfig.apiDesiredCount,
+  ecsSecurityGroup: networkStack.ecsSecurityGroup,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,
