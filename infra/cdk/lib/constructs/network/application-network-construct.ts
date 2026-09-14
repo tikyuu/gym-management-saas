@@ -10,6 +10,7 @@ interface ApplicationNetworkConstructProps {
 }
 
 export class ApplicationNetworkConstruct extends Construct {
+  public readonly routeTable: ec2.CfnRouteTable;
   public readonly subnets: ec2.CfnSubnet[];
 
   constructor(
@@ -19,7 +20,7 @@ export class ApplicationNetworkConstruct extends Construct {
   ) {
     super(scope, id);
 
-    const routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
+    this.routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
       tags: [
         {
           key: "Name",
@@ -32,11 +33,11 @@ export class ApplicationNetworkConstruct extends Construct {
     new ec2.CfnRoute(this, "DefaultRoute", {
       destinationCidrBlock: "0.0.0.0/0",
       natGatewayId: props.natGatewayId,
-      routeTableId: routeTable.ref,
+      routeTableId: this.routeTable.ref,
     });
 
     new ec2.CfnVPCEndpoint(this, "S3GatewayEndpoint", {
-      routeTableIds: [routeTable.ref],
+      routeTableIds: [this.routeTable.ref],
       serviceName: `com.amazonaws.${Stack.of(this).region}.s3`,
       tags: [
         {
@@ -66,7 +67,7 @@ export class ApplicationNetworkConstruct extends Construct {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: routeTable.ref,
+          routeTableId: this.routeTable.ref,
           subnetId: applicationSubnet.ref,
         },
       );

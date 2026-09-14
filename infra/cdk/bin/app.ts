@@ -59,7 +59,7 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 
 new ComputeStack(app, "DevComputeStack", {
   applicationName: devConfig.applicationName,
-  applicationSubnetIds: networkStack.applicationSubnetIds,
+  applicationSubnets: networkStack.applicationSubnets,
   apiDesiredCount: devConfig.apiDesiredCount,
   ecsSecurityGroup: networkStack.ecsSecurityGroup,
   environmentName: devConfig.environmentName,
