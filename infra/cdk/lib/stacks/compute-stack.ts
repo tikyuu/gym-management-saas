@@ -1,4 +1,5 @@
 import {
+  CfnParameter,
   Stack,
   StackProps,
   Tags,
@@ -25,6 +26,11 @@ export class ComputeStack extends Stack {
 
     const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
 
+    const apiImageTag = new CfnParameter(this, "ApiImageTag", {
+      description: "Git commit SHA used as the FastAPI ECR image tag",
+      type: "String",
+    });
+
     Tags.of(this).add("application", props.applicationName);
     Tags.of(this).add("environment", props.environmentName);
     Tags.of(this).add("managed-by", "aws-cdk");
@@ -33,6 +39,25 @@ export class ComputeStack extends Stack {
     this.cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: `${resourceNamePrefix}-ecs-cluster`,
       vpc: props.vpc,
+    });
+
+    const taskDefinition = new ecs.FargateTaskDefinition(
+      this,
+      "ApiTaskDefinition",
+      {
+        cpu: props.taskCpu,
+        family: `${resourceNamePrefix}-api-task`,
+        memoryLimitMiB: props.taskMemoryMiB,
+      },
+    );
+
+    taskDefinition.addContainer("ApiContainer", {
+      containerName: `${resourceNamePrefix}-api-container`,
+      essential: true,
+      image: ecs.ContainerImage.fromEcrRepository(
+        props.repository,
+        apiImageTag.valueAsString,
+      ),
     });
   }
 }
