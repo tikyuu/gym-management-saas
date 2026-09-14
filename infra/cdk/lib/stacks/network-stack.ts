@@ -19,7 +19,7 @@ interface NetworkStackProps extends StackProps {
 
 export class NetworkStack extends Stack {
   public readonly albSecurityGroup: ec2.ISecurityGroup;
-  public readonly applicationSubnetIds: string[];
+  public readonly applicationSubnets: ec2.ISubnet[];
   public readonly databaseSubnetIds: string[];
   public readonly ecsSecurityGroup: ec2.ISecurityGroup;
   public readonly internalAlbSubnetIds: string[];
@@ -89,8 +89,17 @@ export class NetworkStack extends Stack {
       },
     );
 
-    this.applicationSubnetIds = applicationNetwork.subnets.map(
-      (subnet) => subnet.ref,
+    this.applicationSubnets = applicationNetwork.subnets.map(
+      (subnet, index) =>
+        ec2.Subnet.fromSubnetAttributes(
+          this,
+          `ApplicationSubnetReference${index + 1}`,
+          {
+            availabilityZone: props.applicationSubnets[index].availabilityZone,
+            routeTableId: applicationNetwork.routeTable.ref,
+            subnetId: subnet.ref,
+          },
+        ),
     );
     this.internalAlbSubnetIds = internalAlbNetwork.subnets.map(
       (subnet) => subnet.ref,
