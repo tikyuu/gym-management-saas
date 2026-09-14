@@ -63,6 +63,7 @@ new ComputeStack(app, "DevComputeStack", {
   env: {
     region: devConfig.region,
   },
+  repository: containerRegistryStack.repository,
   taskCpu: devConfig.apiTaskCpu,
   taskMemoryMiB: devConfig.apiTaskMemoryMiB,
   vpc: networkStack.vpc,
