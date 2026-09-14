@@ -76,7 +76,12 @@ export class ComputeStack extends Stack {
     new ecs.FargateService(this, "ApiService", {
       assignPublicIp: false,
       cluster: this.cluster,
+      circuitBreaker: {
+        rollback: true,
+      },
       desiredCount: props.apiDesiredCount,
+      maxHealthyPercent: 200,
+      minHealthyPercent: 100,
       securityGroups: [props.ecsSecurityGroup],
       serviceName: `${resourceNamePrefix}-api-service`,
       taskDefinition,
