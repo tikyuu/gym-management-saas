@@ -3,6 +3,7 @@ import {
   StackProps,
   Tags,
   aws_ec2 as ec2,
+  aws_ecr as ecr,
   aws_ecs as ecs,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -10,6 +11,7 @@ import { Construct } from "constructs";
 interface ComputeStackProps extends StackProps {
   applicationName: string;
   environmentName: string;
+  repository: ecr.IRepository;
   taskCpu: number;
   taskMemoryMiB: number;
   vpc: ec2.IVpc;
