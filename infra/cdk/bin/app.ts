@@ -59,6 +59,7 @@ new ComputeStack(app, "DevComputeStack", {
   env: {
     region: devConfig.region,
   },
+  vpc: networkStack.vpc,
 });
 
 new DatabaseStack(app, "DevDatabaseStack", {
