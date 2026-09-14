@@ -4,6 +4,7 @@ export const devConfig = {
   applicationName: "gym-management",
   apiRepositoryEmptyOnDelete: true,
   apiRepositoryRemovalPolicy: RemovalPolicy.DESTROY,
+  apiDesiredCount: 1,
   apiTaskCpu: 512,
   apiTaskMemoryMiB: 1024,
   authenticationRemovalPolicy: RemovalPolicy.DESTROY,

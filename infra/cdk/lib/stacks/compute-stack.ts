@@ -11,6 +11,9 @@ import { Construct } from "constructs";
 
 interface ComputeStackProps extends StackProps {
   applicationName: string;
+  applicationSubnetIds: string[];
+  apiDesiredCount: number;
+  ecsSecurityGroup: ec2.ISecurityGroup;
   environmentName: string;
   repository: ecr.IRepository;
   taskCpu: number;
@@ -58,6 +61,26 @@ export class ComputeStack extends Stack {
         props.repository,
         apiImageTag.valueAsString,
       ),
+      portMappings: [{ containerPort: 8000 }],
+    });
+
+    const applicationSubnets = props.applicationSubnetIds.map(
+      (subnetId, index) =>
+        ec2.Subnet.fromSubnetId(
+          this,
+          `ApplicationSubnet${index + 1}`,
+          subnetId,
+        ),
+    );
+
+    new ecs.FargateService(this, "ApiService", {
+      assignPublicIp: false,
+      cluster: this.cluster,
+      desiredCount: props.apiDesiredCount,
+      securityGroups: [props.ecsSecurityGroup],
+      serviceName: `${resourceNamePrefix}-api-service`,
+      taskDefinition,
+      vpcSubnets: { subnets: applicationSubnets },
     });
   }
 }
