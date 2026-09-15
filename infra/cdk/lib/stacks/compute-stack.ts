@@ -6,6 +6,7 @@ import {
   aws_ec2 as ec2,
   aws_ecr as ecr,
   aws_ecs as ecs,
+  aws_elasticloadbalancingv2 as elbv2,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -44,6 +45,16 @@ export class ComputeStack extends Stack {
     this.cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: `${resourceNamePrefix}-ecs-cluster`,
       vpc: props.vpc,
+    });
+
+    new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
+      internetFacing: false,
+      loadBalancerName: `${resourceNamePrefix}-internal-alb`,
+      securityGroup: props.albSecurityGroup,
+      vpc: props.vpc,
+      vpcSubnets: {
+        subnets: props.internalAlbSubnets,
+      },
     });
 
     const taskDefinition = new ecs.FargateTaskDefinition(
