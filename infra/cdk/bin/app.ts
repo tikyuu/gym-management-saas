@@ -18,6 +18,8 @@ new CertificateStack(app, "DevRegionalCertificateStack", {
   env: {
     region: devConfig.region,
   },
+  hostedZoneId: devConfig.hostedZoneId,
+  hostedZoneName: devConfig.hostedZoneName,
 });
 
 new AuthenticationStack(app, "DevAuthenticationStack", {

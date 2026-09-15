@@ -5,6 +5,8 @@ interface CertificateStackProps extends StackProps {
   applicationName: string;
   domainName: string;
   environmentName: string;
+  hostedZoneId: string;
+  hostedZoneName: string;
 }
 
 export class CertificateStack extends Stack {

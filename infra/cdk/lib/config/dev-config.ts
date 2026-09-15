@@ -37,6 +37,8 @@ export const devConfig = {
   frontendBucketRemovalPolicy: RemovalPolicy.DESTROY,
   frontendBucketVersioned: false,
   environmentName: "dev",
+  hostedZoneId: "Z06251752UDDGYJM4C7LL",
+  hostedZoneName: "tikyuu.click",
   region: "ap-northeast-1",
   vpcCidr: "10.10.0.0/16",
   publicSubnets: [
