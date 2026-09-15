@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 
 interface CertificateStackProps extends StackProps {
   applicationName: string;
+  domainName: string;
   environmentName: string;
 }
 

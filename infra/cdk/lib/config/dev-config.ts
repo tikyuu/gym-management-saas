@@ -1,6 +1,7 @@
 import { RemovalPolicy } from "aws-cdk-lib";
 
 export const devConfig = {
+  albOriginDomainName: "origin-dev.tikyuu.click",
   applicationName: "gym-management",
   apiRepositoryEmptyOnDelete: true,
   apiRepositoryRemovalPolicy: RemovalPolicy.DESTROY,
