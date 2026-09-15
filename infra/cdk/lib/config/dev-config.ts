@@ -33,6 +33,12 @@ export const devConfig = {
   databasePreferredMaintenanceWindow: "fri:20:00-fri:21:00",
   databaseRemovalPolicy: RemovalPolicy.DESTROY,
   databaseStorageType: "gp3",
+  edgeCertificateSubjectAlternativeNames: [
+    "auth-dev.tikyuu.click",
+    "staff-auth-dev.tikyuu.click",
+    "system-admin-auth-dev.tikyuu.click",
+  ],
+  frontendDomainName: "dev.tikyuu.click",
   frontendBucketAutoDeleteObjects: true,
   frontendBucketRemovalPolicy: RemovalPolicy.DESTROY,
   frontendBucketVersioned: false,
