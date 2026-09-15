@@ -22,7 +22,7 @@ export class NetworkStack extends Stack {
   public readonly applicationSubnets: ec2.ISubnet[];
   public readonly databaseSubnetIds: string[];
   public readonly ecsSecurityGroup: ec2.ISecurityGroup;
-  public readonly internalAlbSubnetIds: string[];
+  public readonly internalAlbSubnets: ec2.ISubnet[];
   public readonly rdsSecurityGroup: ec2.ISecurityGroup;
   public readonly vpc: ec2.IVpc;
 
@@ -101,8 +101,18 @@ export class NetworkStack extends Stack {
           },
         ),
     );
-    this.internalAlbSubnetIds = internalAlbNetwork.subnets.map(
-      (subnet) => subnet.ref,
+    this.internalAlbSubnets = internalAlbNetwork.subnets.map(
+      (subnet, index) =>
+        ec2.Subnet.fromSubnetAttributes(
+          this,
+          `InternalAlbSubnetReference${index + 1}`,
+          {
+            availabilityZone:
+              props.privateIngressSubnets[index].availabilityZone,
+            routeTableId: internalAlbNetwork.routeTable.ref,
+            subnetId: subnet.ref,
+          },
+        ),
     );
     this.databaseSubnetIds = databaseNetwork.subnets.map(
       (subnet) => subnet.ref,

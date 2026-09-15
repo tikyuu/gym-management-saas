@@ -9,6 +9,7 @@ interface InternalAlbNetworkConstructProps {
 }
 
 export class InternalAlbNetworkConstruct extends Construct {
+  public readonly routeTable: ec2.CfnRouteTable;
   public readonly subnets: ec2.CfnSubnet[];
 
   constructor(
@@ -18,7 +19,7 @@ export class InternalAlbNetworkConstruct extends Construct {
   ) {
     super(scope, id);
 
-    const routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
+    this.routeTable = new ec2.CfnRouteTable(this, "RouteTable", {
       tags: [
         {
           key: "Name",
@@ -46,7 +47,7 @@ export class InternalAlbNetworkConstruct extends Construct {
         this,
         `${subnet.id}RouteTableAssociation`,
         {
-          routeTableId: routeTable.ref,
+          routeTableId: this.routeTable.ref,
           subnetId: privateIngressSubnet.ref,
         },
       );
