@@ -1,4 +1,10 @@
-import { Stack, StackProps, Tags } from "aws-cdk-lib";
+import {
+  Stack,
+  StackProps,
+  Tags,
+  aws_certificatemanager as acm,
+  aws_route53 as route53,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface CertificateStackProps extends StackProps {
@@ -10,6 +16,8 @@ interface CertificateStackProps extends StackProps {
 }
 
 export class CertificateStack extends Stack {
+  public readonly certificate: acm.ICertificate;
+
   constructor(scope: Construct, id: string, props: CertificateStackProps) {
     super(scope, id, props);
 
@@ -17,5 +25,19 @@ export class CertificateStack extends Stack {
     Tags.of(this).add("environment", props.environmentName);
     Tags.of(this).add("managed-by", "aws-cdk");
     Tags.of(this).add("component", "certificate");
+
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+      this,
+      "HostedZone",
+      {
+        hostedZoneId: props.hostedZoneId,
+        zoneName: props.hostedZoneName,
+      },
+    );
+
+    this.certificate = new acm.Certificate(this, "Certificate", {
+      domainName: props.domainName,
+      validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
   }
 }
