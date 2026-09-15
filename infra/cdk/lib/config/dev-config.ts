@@ -33,6 +33,7 @@ export const devConfig = {
   databasePreferredMaintenanceWindow: "fri:20:00-fri:21:00",
   databaseRemovalPolicy: RemovalPolicy.DESTROY,
   databaseStorageType: "gp3",
+  edgeRegion: "us-east-1",
   edgeCertificateSubjectAlternativeNames: [
     "auth-dev.tikyuu.click",
     "staff-auth-dev.tikyuu.click",

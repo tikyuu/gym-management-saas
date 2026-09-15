@@ -26,6 +26,22 @@ const regionalCertificateStack = new CertificateStack(
   },
 );
 
+const edgeCertificateStack = new CertificateStack(
+  app,
+  "DevEdgeCertificateStack",
+  {
+    applicationName: devConfig.applicationName,
+    domainName: devConfig.frontendDomainName,
+    environmentName: devConfig.environmentName,
+    env: {
+      region: devConfig.edgeRegion,
+    },
+    hostedZoneId: devConfig.hostedZoneId,
+    hostedZoneName: devConfig.hostedZoneName,
+    subjectAlternativeNames: devConfig.edgeCertificateSubjectAlternativeNames,
+  },
+);
+
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
   customerOAuthCallbackUrls: devConfig.customerOAuthCallbackUrls,

@@ -38,6 +38,7 @@ export class CertificateStack extends Stack {
 
     this.certificate = new acm.Certificate(this, "Certificate", {
       domainName: props.domainName,
+      subjectAlternativeNames: props.subjectAlternativeNames,
       validation: acm.CertificateValidation.fromDns(hostedZone),
     });
   }
