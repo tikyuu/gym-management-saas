@@ -10,11 +10,13 @@ import {
 import { Construct } from "constructs";
 
 interface ComputeStackProps extends StackProps {
+  albSecurityGroup: ec2.ISecurityGroup;
   applicationName: string;
   applicationSubnets: ec2.ISubnet[];
   apiDesiredCount: number;
   ecsSecurityGroup: ec2.ISecurityGroup;
   environmentName: string;
+  internalAlbSubnets: ec2.ISubnet[];
   repository: ecr.IRepository;
   taskCpu: number;
   taskMemoryMiB: number;
