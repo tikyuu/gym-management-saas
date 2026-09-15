@@ -109,5 +109,14 @@ export class ApplicationStack extends Stack {
         vpc: props.vpc,
       },
     );
+
+    this.loadBalancer.addListener("HttpsListener", {
+      certificates: [props.certificate],
+      defaultTargetGroups: [apiTargetGroup],
+      open: false,
+      port: 443,
+      protocol: elbv2.ApplicationProtocol.HTTPS,
+      sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
+    });
   }
 }
