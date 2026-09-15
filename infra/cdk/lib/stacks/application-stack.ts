@@ -94,5 +94,20 @@ export class ApplicationStack extends Stack {
       taskDefinition,
       vpcSubnets: { subnets: props.applicationSubnets },
     });
+
+    const apiTargetGroup = new elbv2.ApplicationTargetGroup(
+      this,
+      "ApiTargetGroup",
+      {
+        healthCheck: {
+          path: "/health",
+        },
+        port: 8000,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        targetGroupName: `${resourceNamePrefix}-api-tg`,
+        targets: [apiService],
+        vpc: props.vpc,
+      },
+    );
   }
 }
