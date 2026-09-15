@@ -2,6 +2,7 @@
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
+import { CertificateStack } from "../lib/stacks/certificate-stack";
 import { ComputeStack } from "../lib/stacks/compute-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
@@ -9,6 +10,15 @@ import { NetworkStack } from "../lib/stacks/network-stack";
 import { StorageStack } from "../lib/stacks/storage-stack";
 
 const app = new cdk.App();
+
+new CertificateStack(app, "DevRegionalCertificateStack", {
+  applicationName: devConfig.applicationName,
+  domainName: devConfig.albOriginDomainName,
+  environmentName: devConfig.environmentName,
+  env: {
+    region: devConfig.region,
+  },
+});
 
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
