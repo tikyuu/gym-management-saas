@@ -3,6 +3,7 @@ import {
   Stack,
   StackProps,
   Tags,
+  aws_certificatemanager as acm,
   aws_ec2 as ec2,
   aws_ecr as ecr,
   aws_ecs as ecs,
@@ -10,11 +11,12 @@ import {
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
-interface ComputeStackProps extends StackProps {
+interface ApplicationStackProps extends StackProps {
   albSecurityGroup: ec2.ISecurityGroup;
   applicationName: string;
   applicationSubnets: ec2.ISubnet[];
   apiDesiredCount: number;
+  certificate: acm.ICertificate;
   ecsSecurityGroup: ec2.ISecurityGroup;
   environmentName: string;
   internalAlbSubnets: ec2.ISubnet[];
@@ -24,10 +26,10 @@ interface ComputeStackProps extends StackProps {
   vpc: ec2.IVpc;
 }
 
-export class ComputeStack extends Stack {
+export class ApplicationStack extends Stack {
   public readonly cluster: ecs.ICluster;
 
-  constructor(scope: Construct, id: string, props: ComputeStackProps) {
+  constructor(scope: Construct, id: string, props: ApplicationStackProps) {
     super(scope, id, props);
 
     const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
@@ -40,7 +42,7 @@ export class ComputeStack extends Stack {
     Tags.of(this).add("application", props.applicationName);
     Tags.of(this).add("environment", props.environmentName);
     Tags.of(this).add("managed-by", "aws-cdk");
-    Tags.of(this).add("component", "compute");
+    Tags.of(this).add("component", "application");
 
     this.cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: `${resourceNamePrefix}-ecs-cluster`,
