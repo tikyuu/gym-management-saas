@@ -58,6 +58,7 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
 });
 
 new ComputeStack(app, "DevComputeStack", {
+  albSecurityGroup: networkStack.albSecurityGroup,
   applicationName: devConfig.applicationName,
   applicationSubnets: networkStack.applicationSubnets,
   apiDesiredCount: devConfig.apiDesiredCount,
@@ -67,6 +68,7 @@ new ComputeStack(app, "DevComputeStack", {
     region: devConfig.region,
   },
   repository: containerRegistryStack.repository,
+  internalAlbSubnets: networkStack.internalAlbSubnets,
   taskCpu: devConfig.apiTaskCpu,
   taskMemoryMiB: devConfig.apiTaskMemoryMiB,
   vpc: networkStack.vpc,
