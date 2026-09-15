@@ -28,6 +28,7 @@ interface ApplicationStackProps extends StackProps {
 
 export class ApplicationStack extends Stack {
   public readonly cluster: ecs.ICluster;
+  public readonly loadBalancer: elbv2.IApplicationLoadBalancer;
 
   constructor(scope: Construct, id: string, props: ApplicationStackProps) {
     super(scope, id, props);
@@ -49,7 +50,7 @@ export class ApplicationStack extends Stack {
       vpc: props.vpc,
     });
 
-    new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
+    this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
       internetFacing: false,
       loadBalancerName: `${resourceNamePrefix}-internal-alb`,
       securityGroup: props.albSecurityGroup,
@@ -79,7 +80,7 @@ export class ApplicationStack extends Stack {
       portMappings: [{ containerPort: 8000 }],
     });
 
-    new ecs.FargateService(this, "ApiService", {
+    const apiService = new ecs.FargateService(this, "ApiService", {
       assignPublicIp: false,
       cluster: this.cluster,
       circuitBreaker: {
