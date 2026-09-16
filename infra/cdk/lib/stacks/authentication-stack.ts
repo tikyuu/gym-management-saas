@@ -24,6 +24,7 @@ interface AuthenticationStackProps extends StackProps {
   hostedZoneId: string;
   hostedZoneName: string;
   removalPolicy: RemovalPolicy;
+  staffAuthDomainName: string;
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
   staffUserPoolDomainPrefix: string;
@@ -90,8 +91,10 @@ export class AuthenticationStack extends Stack {
       this,
       "StaffAuthentication",
       {
+        edgeCertificate: props.edgeCertificate,
         removalPolicy: props.removalPolicy,
         resourceNamePrefix,
+        staffAuthDomainName: props.staffAuthDomainName,
         staffOAuthCallbackUrls: props.staffOAuthCallbackUrls,
         staffOAuthLogoutUrls: props.staffOAuthLogoutUrls,
         staffUserPoolDomainPrefix: props.staffUserPoolDomainPrefix,
