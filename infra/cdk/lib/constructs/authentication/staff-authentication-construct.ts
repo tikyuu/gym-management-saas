@@ -1,13 +1,16 @@
 import {
   Duration,
   RemovalPolicy,
+  aws_certificatemanager as acm,
   aws_cognito as cognito,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface StaffAuthenticationConstructProps {
+  edgeCertificate: acm.ICertificate;
   removalPolicy: RemovalPolicy;
   resourceNamePrefix: string;
+  staffAuthDomainName: string;
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
   staffUserPoolDomainPrefix: string;
@@ -54,6 +57,14 @@ export class StaffAuthenticationConstruct extends Construct {
     const userPoolDomain = this.userPool.addDomain("StaffUserPoolDomain", {
       cognitoDomain: {
         domainPrefix: props.staffUserPoolDomainPrefix,
+      },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
+    });
+
+    this.userPool.addDomain("StaffCustomDomain", {
+      customDomain: {
+        certificate: props.edgeCertificate,
+        domainName: props.staffAuthDomainName,
       },
       managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
