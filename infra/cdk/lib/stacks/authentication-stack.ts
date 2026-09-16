@@ -132,5 +132,13 @@ export class AuthenticationStack extends Stack {
 
     this.systemAdminAppClient = systemAdminAuthentication.appClient;
     this.systemAdminUserPool = systemAdminAuthentication.userPool;
+
+    new route53.ARecord(this, "SystemAdminAuthDomainRecord", {
+      recordName: props.systemAdminAuthDomainName,
+      target: route53.RecordTarget.fromAlias(
+        new targets.UserPoolDomainTarget(systemAdminAuthentication.customDomain),
+      ),
+      zone: hostedZone,
+    });
   }
 }

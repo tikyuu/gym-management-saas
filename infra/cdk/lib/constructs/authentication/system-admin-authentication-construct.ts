@@ -19,6 +19,7 @@ interface SystemAdminAuthenticationConstructProps {
 
 export class SystemAdminAuthenticationConstruct extends Construct {
   public readonly appClient: cognito.IUserPoolClient;
+  public readonly customDomain: cognito.UserPoolDomain;
   public readonly userPool: cognito.IUserPool;
 
   constructor(
@@ -64,7 +65,7 @@ export class SystemAdminAuthenticationConstruct extends Construct {
       },
     );
 
-    this.userPool.addDomain("SystemAdminCustomDomain", {
+    this.customDomain = this.userPool.addDomain("SystemAdminCustomDomain", {
       customDomain: {
         certificate: props.edgeCertificate,
         domainName: props.systemAdminAuthDomainName,
