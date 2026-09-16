@@ -30,6 +30,7 @@ export const devConfig = {
     "https://dev.tikyuu.click/staff",
   ],
   staffUserPoolDomainPrefix: "gym-management-dev-staff",
+  systemAdminAuthDomainName: "system-admin-auth-dev.tikyuu.click",
   systemAdminOAuthCallbackUrls: [
     "http://localhost:5173/system-admin/auth/callback",
     "https://dev.tikyuu.click/system-admin/auth/callback",

@@ -28,6 +28,7 @@ interface AuthenticationStackProps extends StackProps {
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
   staffUserPoolDomainPrefix: string;
+  systemAdminAuthDomainName: string;
   systemAdminOAuthCallbackUrls: string[];
   systemAdminOAuthLogoutUrls: string[];
   systemAdminUserPoolDomainPrefix: string;
@@ -117,8 +118,10 @@ export class AuthenticationStack extends Stack {
       this,
       "SystemAdminAuthentication",
       {
+        edgeCertificate: props.edgeCertificate,
         removalPolicy: props.removalPolicy,
         resourceNamePrefix,
+        systemAdminAuthDomainName: props.systemAdminAuthDomainName,
         systemAdminOAuthCallbackUrls: props.systemAdminOAuthCallbackUrls,
         systemAdminOAuthLogoutUrls: props.systemAdminOAuthLogoutUrls,
         systemAdminUserPoolDomainPrefix:
