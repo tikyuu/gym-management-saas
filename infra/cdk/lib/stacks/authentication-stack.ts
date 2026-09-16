@@ -105,6 +105,14 @@ export class AuthenticationStack extends Stack {
     this.staffAppClient = staffAuthentication.appClient;
     this.staffUserPool = staffAuthentication.userPool;
 
+    new route53.ARecord(this, "StaffAuthDomainRecord", {
+      recordName: props.staffAuthDomainName,
+      target: route53.RecordTarget.fromAlias(
+        new targets.UserPoolDomainTarget(staffAuthentication.customDomain),
+      ),
+      zone: hostedZone,
+    });
+
     const systemAdminAuthentication = new SystemAdminAuthenticationConstruct(
       this,
       "SystemAdminAuthentication",
