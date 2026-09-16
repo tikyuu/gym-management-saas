@@ -1,14 +1,17 @@
 import {
   Duration,
   RemovalPolicy,
+  aws_certificatemanager as acm,
   aws_cognito as cognito,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface CustomerAuthenticationConstructProps {
+  customerAuthDomainName: string;
   customerOAuthCallbackUrls: string[];
   customerOAuthLogoutUrls: string[];
   customerUserPoolDomainPrefix: string;
+  edgeCertificate: acm.ICertificate;
   removalPolicy: RemovalPolicy;
   resourceNamePrefix: string;
   userPoolDeletionProtection: boolean;
@@ -57,6 +60,14 @@ export class CustomerAuthenticationConstruct extends Construct {
     const userPoolDomain = this.userPool.addDomain("CustomerUserPoolDomain", {
       cognitoDomain: {
         domainPrefix: props.customerUserPoolDomainPrefix,
+      },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
+    });
+
+    this.userPool.addDomain("CustomerCustomDomain", {
+      customDomain: {
+        certificate: props.edgeCertificate,
+        domainName: props.customerAuthDomainName,
       },
       managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
