@@ -19,6 +19,8 @@ interface AuthenticationStackProps extends StackProps {
   customerUserPoolDomainPrefix: string;
   edgeCertificate: acm.ICertificate;
   environmentName: string;
+  hostedZoneId: string;
+  hostedZoneName: string;
   removalPolicy: RemovalPolicy;
   staffOAuthCallbackUrls: string[];
   staffOAuthLogoutUrls: string[];
