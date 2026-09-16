@@ -46,6 +46,7 @@ const edgeCertificateStack = new CertificateStack(
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
   crossRegionReferences: true,
+  customerAuthDomainName: devConfig.customerAuthDomainName,
   customerOAuthCallbackUrls: devConfig.customerOAuthCallbackUrls,
   customerOAuthLogoutUrls: devConfig.customerOAuthLogoutUrls,
   customerUserPoolDomainPrefix: devConfig.customerUserPoolDomainPrefix,

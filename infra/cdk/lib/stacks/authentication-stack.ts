@@ -13,6 +13,7 @@ import { SystemAdminAuthenticationConstruct } from "../constructs/authentication
 
 interface AuthenticationStackProps extends StackProps {
   applicationName: string;
+  customerAuthDomainName: string;
   customerOAuthCallbackUrls: string[];
   customerOAuthLogoutUrls: string[];
   customerUserPoolDomainPrefix: string;
