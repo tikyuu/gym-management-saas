@@ -55,6 +55,8 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   env: {
     region: devConfig.region,
   },
+  hostedZoneId: devConfig.hostedZoneId,
+  hostedZoneName: devConfig.hostedZoneName,
   removalPolicy: devConfig.authenticationRemovalPolicy,
   staffOAuthCallbackUrls: devConfig.staffOAuthCallbackUrls,
   staffOAuthLogoutUrls: devConfig.staffOAuthLogoutUrls,

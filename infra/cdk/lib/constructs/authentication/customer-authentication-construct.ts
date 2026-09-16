@@ -19,6 +19,7 @@ interface CustomerAuthenticationConstructProps {
 
 export class CustomerAuthenticationConstruct extends Construct {
   public readonly appClient: cognito.IUserPoolClient;
+  public readonly customDomain: cognito.UserPoolDomain;
   public readonly userPool: cognito.IUserPool;
 
   constructor(
@@ -64,7 +65,7 @@ export class CustomerAuthenticationConstruct extends Construct {
       managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
 
-    this.userPool.addDomain("CustomerCustomDomain", {
+    this.customDomain = this.userPool.addDomain("CustomerCustomDomain", {
       customDomain: {
         certificate: props.edgeCertificate,
         domainName: props.customerAuthDomainName,
