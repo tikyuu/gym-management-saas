@@ -51,9 +51,11 @@ export class AuthenticationStack extends Stack {
       this,
       "CustomerAuthentication",
       {
+        customerAuthDomainName: props.customerAuthDomainName,
         customerOAuthCallbackUrls: props.customerOAuthCallbackUrls,
         customerOAuthLogoutUrls: props.customerOAuthLogoutUrls,
         customerUserPoolDomainPrefix: props.customerUserPoolDomainPrefix,
+        edgeCertificate: props.edgeCertificate,
         removalPolicy: props.removalPolicy,
         resourceNamePrefix,
         userPoolDeletionProtection: props.userPoolDeletionProtection,
