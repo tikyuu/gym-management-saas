@@ -5,6 +5,8 @@ import {
   Tags,
   aws_certificatemanager as acm,
   aws_cognito as cognito,
+  aws_route53 as route53,
+  aws_route53_targets as targets,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { CustomerAuthenticationConstruct } from "../constructs/authentication/customer-authentication-construct";
@@ -66,6 +68,23 @@ export class AuthenticationStack extends Stack {
 
     this.customerAppClient = customerAuthentication.appClient;
     this.customerUserPool = customerAuthentication.userPool;
+
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+      this,
+      "HostedZone",
+      {
+        hostedZoneId: props.hostedZoneId,
+        zoneName: props.hostedZoneName,
+      },
+    );
+
+    new route53.ARecord(this, "CustomerAuthDomainRecord", {
+      recordName: props.customerAuthDomainName,
+      target: route53.RecordTarget.fromAlias(
+        new targets.UserPoolDomainTarget(customerAuthentication.customDomain),
+      ),
+      zone: hostedZone,
+    });
 
     const staffAuthentication = new StaffAuthenticationConstruct(
       this,
