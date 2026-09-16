@@ -1,13 +1,16 @@
 import {
   Duration,
   RemovalPolicy,
+  aws_certificatemanager as acm,
   aws_cognito as cognito,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface SystemAdminAuthenticationConstructProps {
+  edgeCertificate: acm.ICertificate;
   removalPolicy: RemovalPolicy;
   resourceNamePrefix: string;
+  systemAdminAuthDomainName: string;
   systemAdminOAuthCallbackUrls: string[];
   systemAdminOAuthLogoutUrls: string[];
   systemAdminUserPoolDomainPrefix: string;
@@ -60,6 +63,14 @@ export class SystemAdminAuthenticationConstruct extends Construct {
         managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
       },
     );
+
+    this.userPool.addDomain("SystemAdminCustomDomain", {
+      customDomain: {
+        certificate: props.edgeCertificate,
+        domainName: props.systemAdminAuthDomainName,
+      },
+      managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
+    });
 
     this.appClient = new cognito.UserPoolClient(
       this,

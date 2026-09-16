@@ -62,6 +62,7 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   staffOAuthCallbackUrls: devConfig.staffOAuthCallbackUrls,
   staffOAuthLogoutUrls: devConfig.staffOAuthLogoutUrls,
   staffUserPoolDomainPrefix: devConfig.staffUserPoolDomainPrefix,
+  systemAdminAuthDomainName: devConfig.systemAdminAuthDomainName,
   systemAdminOAuthCallbackUrls: devConfig.systemAdminOAuthCallbackUrls,
   systemAdminOAuthLogoutUrls: devConfig.systemAdminOAuthLogoutUrls,
   systemAdminUserPoolDomainPrefix: devConfig.systemAdminUserPoolDomainPrefix,
