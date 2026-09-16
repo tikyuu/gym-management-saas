@@ -10,16 +10,33 @@ export const devConfig = {
   apiTaskMemoryMiB: 1024,
   authenticationRemovalPolicy: RemovalPolicy.DESTROY,
   authenticationUserPoolDeletionProtection: false,
-  customerOAuthCallbackUrls: ["http://localhost:5173/auth/callback"],
-  customerOAuthLogoutUrls: ["http://localhost:5173"],
+  customerAuthDomainName: "auth-dev.tikyuu.click",
+  customerOAuthCallbackUrls: [
+    "http://localhost:5173/auth/callback",
+    "https://dev.tikyuu.click/auth/callback",
+  ],
+  customerOAuthLogoutUrls: [
+    "http://localhost:5173",
+    "https://dev.tikyuu.click",
+  ],
   customerUserPoolDomainPrefix: "gym-management-dev",
-  staffOAuthCallbackUrls: ["http://localhost:5173/staff/auth/callback"],
-  staffOAuthLogoutUrls: ["http://localhost:5173/staff"],
+  staffOAuthCallbackUrls: [
+    "http://localhost:5173/staff/auth/callback",
+    "https://dev.tikyuu.click/staff/auth/callback",
+  ],
+  staffOAuthLogoutUrls: [
+    "http://localhost:5173/staff",
+    "https://dev.tikyuu.click/staff",
+  ],
   staffUserPoolDomainPrefix: "gym-management-dev-staff",
   systemAdminOAuthCallbackUrls: [
     "http://localhost:5173/system-admin/auth/callback",
+    "https://dev.tikyuu.click/system-admin/auth/callback",
   ],
-  systemAdminOAuthLogoutUrls: ["http://localhost:5173/system-admin"],
+  systemAdminOAuthLogoutUrls: [
+    "http://localhost:5173/system-admin",
+    "https://dev.tikyuu.click/system-admin",
+  ],
   systemAdminUserPoolDomainPrefix: "gym-management-dev-system-admin",
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
