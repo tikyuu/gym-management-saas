@@ -31,6 +31,7 @@ const edgeCertificateStack = new CertificateStack(
   "DevEdgeCertificateStack",
   {
     applicationName: devConfig.applicationName,
+    crossRegionReferences: true,
     domainName: devConfig.frontendDomainName,
     environmentName: devConfig.environmentName,
     env: {
@@ -44,9 +45,11 @@ const edgeCertificateStack = new CertificateStack(
 
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
+  crossRegionReferences: true,
   customerOAuthCallbackUrls: devConfig.customerOAuthCallbackUrls,
   customerOAuthLogoutUrls: devConfig.customerOAuthLogoutUrls,
   customerUserPoolDomainPrefix: devConfig.customerUserPoolDomainPrefix,
+  edgeCertificate: edgeCertificateStack.certificate,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,

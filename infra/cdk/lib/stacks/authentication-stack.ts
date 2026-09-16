@@ -3,6 +3,7 @@ import {
   Stack,
   StackProps,
   Tags,
+  aws_certificatemanager as acm,
   aws_cognito as cognito,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -15,6 +16,7 @@ interface AuthenticationStackProps extends StackProps {
   customerOAuthCallbackUrls: string[];
   customerOAuthLogoutUrls: string[];
   customerUserPoolDomainPrefix: string;
+  edgeCertificate: acm.ICertificate;
   environmentName: string;
   removalPolicy: RemovalPolicy;
   staffOAuthCallbackUrls: string[];
