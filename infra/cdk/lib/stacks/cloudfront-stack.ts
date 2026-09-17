@@ -8,6 +8,7 @@ import {
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
+  aws_elasticloadbalancingv2 as elbv2,
   aws_route53 as route53,
   aws_route53_targets as targets,
   aws_s3 as s3,
@@ -15,6 +16,7 @@ import {
 import { Construct } from "constructs";
 
 interface CloudFrontStackProps extends StackProps {
+  albOriginDomainName: string;
   applicationName: string;
   edgeCertificate: acm.ICertificate;
   environmentName: string;
@@ -24,6 +26,7 @@ interface CloudFrontStackProps extends StackProps {
   frontendDomainName: string;
   hostedZoneId: string;
   hostedZoneName: string;
+  internalAlb: elbv2.IApplicationLoadBalancer;
 }
 
 export class CloudFrontStack extends Stack {
@@ -63,6 +66,14 @@ export class CloudFrontStack extends Stack {
       removalPolicy: props.frontendBucketRemovalPolicy,
       versioned: props.frontendBucketVersioned,
     });
+
+    const apiOrigin = origins.VpcOrigin.withApplicationLoadBalancer(
+      props.internalAlb,
+      {
+        domainName: props.albOriginDomainName,
+        protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+      },
+    );
 
     const distribution = new cloudfront.Distribution(this, "FrontendDistribution", {
       certificate: props.edgeCertificate,

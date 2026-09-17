@@ -97,7 +97,7 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
   databaseSubnets: devConfig.databaseSubnets,
 });
 
-new ApplicationStack(app, "DevApplicationStack", {
+const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   albSecurityGroup: networkStack.albSecurityGroup,
   applicationName: devConfig.applicationName,
   applicationSubnets: networkStack.applicationSubnets,
@@ -139,6 +139,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
 });
 
 new CloudFrontStack(app, "DevCloudFrontStack", {
+  albOriginDomainName: devConfig.albOriginDomainName,
   applicationName: devConfig.applicationName,
   crossRegionReferences: true,
   edgeCertificate: edgeCertificateStack.certificate,
@@ -153,6 +154,7 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   frontendDomainName: devConfig.frontendDomainName,
   hostedZoneId: devConfig.hostedZoneId,
   hostedZoneName: devConfig.hostedZoneName,
+  internalAlb: applicationStack.loadBalancer,
 });
 
 app.synth();
