@@ -139,7 +139,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
 });
 
-new StorageStack(app, "DevStorageStack", {
+const storageStack = new StorageStack(app, "DevStorageStack", {
   applicationName: devConfig.applicationName,
   environmentName: devConfig.environmentName,
   env: {
@@ -155,6 +155,7 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   env: {
     region: devConfig.region,
   },
+  frontendBucket: storageStack.frontendBucket,
 });
 
 app.synth();
