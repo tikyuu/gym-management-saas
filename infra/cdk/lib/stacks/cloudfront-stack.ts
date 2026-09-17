@@ -76,6 +76,16 @@ export class CloudFrontStack extends Stack {
     );
 
     const distribution = new cloudfront.Distribution(this, "FrontendDistribution", {
+      additionalBehaviors: {
+        "/api/*": {
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          origin: apiOrigin,
+          originRequestPolicy:
+            cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+        },
+      },
       certificate: props.edgeCertificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(
