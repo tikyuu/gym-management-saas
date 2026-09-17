@@ -4,6 +4,7 @@ import { devConfig } from "../lib/config/dev-config";
 import { ApplicationStack } from "../lib/stacks/application-stack";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
 import { CertificateStack } from "../lib/stacks/certificate-stack";
+import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
@@ -148,6 +149,12 @@ new StorageStack(app, "DevStorageStack", {
     devConfig.frontendBucketAutoDeleteObjects,
   frontendBucketRemovalPolicy: devConfig.frontendBucketRemovalPolicy,
   frontendBucketVersioned: devConfig.frontendBucketVersioned,
+});
+
+new CloudFrontStack(app, "DevCloudFrontStack", {
+  env: {
+    region: devConfig.region,
+  },
 });
 
 app.synth();
