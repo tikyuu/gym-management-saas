@@ -140,6 +140,8 @@ new DatabaseStack(app, "DevDatabaseStack", {
 
 new CloudFrontStack(app, "DevCloudFrontStack", {
   applicationName: devConfig.applicationName,
+  crossRegionReferences: true,
+  edgeCertificate: edgeCertificateStack.certificate,
   environmentName: devConfig.environmentName,
   env: {
     region: devConfig.region,
@@ -148,6 +150,7 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
     devConfig.frontendBucketAutoDeleteObjects,
   frontendBucketRemovalPolicy: devConfig.frontendBucketRemovalPolicy,
   frontendBucketVersioned: devConfig.frontendBucketVersioned,
+  frontendDomainName: devConfig.frontendDomainName,
 });
 
 app.synth();
