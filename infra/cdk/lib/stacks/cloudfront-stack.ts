@@ -8,6 +8,8 @@ import {
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
+  aws_route53 as route53,
+  aws_route53_targets as targets,
   aws_s3 as s3,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -20,6 +22,8 @@ interface CloudFrontStackProps extends StackProps {
   frontendBucketRemovalPolicy: RemovalPolicy;
   frontendBucketVersioned: boolean;
   frontendDomainName: string;
+  hostedZoneId: string;
+  hostedZoneName: string;
 }
 
 export class CloudFrontStack extends Stack {
@@ -34,6 +38,15 @@ export class CloudFrontStack extends Stack {
     Tags.of(this).add("environment", props.environmentName);
     Tags.of(this).add("managed-by", "aws-cdk");
     Tags.of(this).add("component", "cloudfront");
+
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+      this,
+      "HostedZone",
+      {
+        hostedZoneId: props.hostedZoneId,
+        zoneName: props.hostedZoneName,
+      },
+    );
 
     this.frontendBucket = new s3.Bucket(this, "FrontendBucket", {
       autoDeleteObjects: props.frontendBucketAutoDeleteObjects,
@@ -51,7 +64,7 @@ export class CloudFrontStack extends Stack {
       versioned: props.frontendBucketVersioned,
     });
 
-    new cloudfront.Distribution(this, "FrontendDistribution", {
+    const distribution = new cloudfront.Distribution(this, "FrontendDistribution", {
       certificate: props.edgeCertificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(
@@ -61,6 +74,22 @@ export class CloudFrontStack extends Stack {
       },
       defaultRootObject: "index.html",
       domainNames: [props.frontendDomainName],
+    });
+
+    new route53.ARecord(this, "FrontendAliasRecord", {
+      recordName: props.frontendDomainName,
+      target: route53.RecordTarget.fromAlias(
+        new targets.CloudFrontTarget(distribution),
+      ),
+      zone: hostedZone,
+    });
+
+    new route53.AaaaRecord(this, "FrontendIpv6AliasRecord", {
+      recordName: props.frontendDomainName,
+      target: route53.RecordTarget.fromAlias(
+        new targets.CloudFrontTarget(distribution),
+      ),
+      zone: hostedZone,
     });
   }
 }
