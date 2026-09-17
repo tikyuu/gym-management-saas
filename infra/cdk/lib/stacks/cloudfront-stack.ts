@@ -5,6 +5,8 @@ import {
   Stack,
   StackProps,
   Tags,
+  aws_cloudfront as cloudfront,
+  aws_cloudfront_origins as origins,
   aws_s3 as s3,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -44,6 +46,16 @@ export class CloudFrontStack extends Stack {
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       removalPolicy: props.frontendBucketRemovalPolicy,
       versioned: props.frontendBucketVersioned,
+    });
+
+    new cloudfront.Distribution(this, "FrontendDistribution", {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(
+          this.frontendBucket,
+        ),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+      defaultRootObject: "index.html",
     });
   }
 }
