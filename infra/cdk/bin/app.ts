@@ -8,7 +8,6 @@ import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
-import { StorageStack } from "../lib/stacks/storage-stack";
 
 const app = new cdk.App();
 
@@ -139,7 +138,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
 });
 
-const storageStack = new StorageStack(app, "DevStorageStack", {
+new CloudFrontStack(app, "DevCloudFrontStack", {
   applicationName: devConfig.applicationName,
   environmentName: devConfig.environmentName,
   env: {
@@ -149,13 +148,6 @@ const storageStack = new StorageStack(app, "DevStorageStack", {
     devConfig.frontendBucketAutoDeleteObjects,
   frontendBucketRemovalPolicy: devConfig.frontendBucketRemovalPolicy,
   frontendBucketVersioned: devConfig.frontendBucketVersioned,
-});
-
-new CloudFrontStack(app, "DevCloudFrontStack", {
-  env: {
-    region: devConfig.region,
-  },
-  frontendBucket: storageStack.frontendBucket,
 });
 
 app.synth();
