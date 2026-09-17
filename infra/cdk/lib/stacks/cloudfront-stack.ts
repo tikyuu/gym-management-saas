@@ -5,6 +5,7 @@ import {
   Stack,
   StackProps,
   Tags,
+  aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
   aws_s3 as s3,
@@ -13,10 +14,12 @@ import { Construct } from "constructs";
 
 interface CloudFrontStackProps extends StackProps {
   applicationName: string;
+  edgeCertificate: acm.ICertificate;
   environmentName: string;
   frontendBucketAutoDeleteObjects: boolean;
   frontendBucketRemovalPolicy: RemovalPolicy;
   frontendBucketVersioned: boolean;
+  frontendDomainName: string;
 }
 
 export class CloudFrontStack extends Stack {
@@ -49,6 +52,7 @@ export class CloudFrontStack extends Stack {
     });
 
     new cloudfront.Distribution(this, "FrontendDistribution", {
+      certificate: props.edgeCertificate,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(
           this.frontendBucket,
@@ -56,6 +60,7 @@ export class CloudFrontStack extends Stack {
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       defaultRootObject: "index.html",
+      domainNames: [props.frontendDomainName],
     });
   }
 }
