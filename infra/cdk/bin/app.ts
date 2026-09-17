@@ -151,6 +151,8 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   frontendBucketRemovalPolicy: devConfig.frontendBucketRemovalPolicy,
   frontendBucketVersioned: devConfig.frontendBucketVersioned,
   frontendDomainName: devConfig.frontendDomainName,
+  hostedZoneId: devConfig.hostedZoneId,
+  hostedZoneName: devConfig.hostedZoneName,
 });
 
 app.synth();
