@@ -88,6 +88,15 @@ export class CloudFrontStack extends Stack {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
 
+    const frontendCachePolicy = new cloudfront.CachePolicy(this, "FrontendCachePolicy", {
+      cachePolicyName: `${resourceNamePrefix}-frontend-cache`,
+      defaultTtl: Duration.seconds(0),
+      enableAcceptEncodingBrotli: true,
+      enableAcceptEncodingGzip: true,
+      maxTtl: Duration.days(365),
+      minTtl: Duration.seconds(0),
+    });
+
     const distribution = new cloudfront.Distribution(this, "FrontendDistribution", {
       additionalBehaviors: {
         "/api/*": {
@@ -101,6 +110,7 @@ export class CloudFrontStack extends Stack {
       },
       certificate: props.edgeCertificate,
       defaultBehavior: {
+        cachePolicy: frontendCachePolicy,
         functionAssociations: [
           {
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
