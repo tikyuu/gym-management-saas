@@ -139,6 +139,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
 });
 
 new CloudFrontStack(app, "DevCloudFrontStack", {
+  albSecurityGroupId: networkStack.albSecurityGroup.securityGroupId,
   albOriginDomainName: devConfig.albOriginDomainName,
   applicationName: devConfig.applicationName,
   crossRegionReferences: true,
@@ -155,6 +156,7 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   hostedZoneId: devConfig.hostedZoneId,
   hostedZoneName: devConfig.hostedZoneName,
   internalAlb: applicationStack.loadBalancer,
+  vpcId: networkStack.vpc.vpcId,
 });
 
 app.synth();
