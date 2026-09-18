@@ -8,6 +8,7 @@ import {
   aws_certificatemanager as acm,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
+  aws_ec2 as ec2,
   aws_elasticloadbalancingv2 as elbv2,
   aws_route53 as route53,
   aws_route53_targets as targets,
@@ -128,6 +129,16 @@ export class CloudFrontStack extends Stack {
     );
 
     vpcOriginSecurityGroupLookup.node.addDependency(distribution);
+
+    new ec2.CfnSecurityGroupIngress(this, "CloudFrontToAlbIngress", {
+      fromPort: 443,
+      groupId: props.albSecurityGroupId,
+      ipProtocol: "tcp",
+      sourceSecurityGroupId: vpcOriginSecurityGroupLookup.getResponseField(
+        "SecurityGroups.0.GroupId",
+      ),
+      toPort: 443,
+    });
 
     new route53.ARecord(this, "FrontendAliasRecord", {
       recordName: props.frontendDomainName,
