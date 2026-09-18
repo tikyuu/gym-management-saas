@@ -80,6 +80,14 @@ export class CloudFrontStack extends Stack {
       },
     );
 
+    const spaRewriteFunction = new cloudfront.Function(this, "SpaRewriteFunction", {
+      code: cloudfront.FunctionCode.fromFile({
+        filePath: "lib/functions/spa-rewrite.js",
+      }),
+      functionName: `${resourceNamePrefix}-spa-rewrite`,
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+    });
+
     const distribution = new cloudfront.Distribution(this, "FrontendDistribution", {
       additionalBehaviors: {
         "/api/*": {
@@ -93,6 +101,12 @@ export class CloudFrontStack extends Stack {
       },
       certificate: props.edgeCertificate,
       defaultBehavior: {
+        functionAssociations: [
+          {
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: spaRewriteFunction,
+          },
+        ],
         origin: origins.S3BucketOrigin.withOriginAccessControl(
           this.frontendBucket,
         ),
