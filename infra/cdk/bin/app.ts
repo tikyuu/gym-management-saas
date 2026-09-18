@@ -4,6 +4,7 @@ import { devConfig } from "../lib/config/dev-config";
 import { ApplicationStack } from "../lib/stacks/application-stack";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
 import { CertificateStack } from "../lib/stacks/certificate-stack";
+import { CiCdIdentityStack } from "../lib/stacks/ci-cd-identity-stack";
 import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
@@ -11,6 +12,12 @@ import { NetworkStack } from "../lib/stacks/network-stack";
 import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
+
+new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
+  env: {
+    region: devConfig.region,
+  },
+});
 
 const regionalCertificateStack = new CertificateStack(
   app,
