@@ -6,6 +6,7 @@ import {
   aws_ec2 as ec2,
   aws_logs as logs,
   aws_rds as rds,
+  aws_secretsmanager as secretsmanager,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -98,6 +99,16 @@ export class DatabaseStack extends Stack {
     databaseInstance.node.addDependency(databaseLogGroup);
 
     databaseInstance.applyRemovalPolicy(props.databaseRemovalPolicy);
+
+    new secretsmanager.Secret(this, "ApplicationUserSecret", {
+      generateSecretString: {
+        generateStringKey: "password",
+        passwordLength: 32,
+        secretStringTemplate: JSON.stringify({ username: "gym_app" }),
+      },
+      removalPolicy: props.databaseRemovalPolicy,
+      secretName: `${resourceNamePrefix}-app-db-credentials`,
+    });
 
     this.databaseEndpointAddress = databaseInstance.attrEndpointAddress;
     this.databaseEndpointPort = databaseInstance.attrEndpointPort;
