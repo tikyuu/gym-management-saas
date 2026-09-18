@@ -8,6 +8,7 @@ import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
+import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
 
@@ -42,6 +43,14 @@ const edgeCertificateStack = new CertificateStack(
     subjectAlternativeNames: devConfig.edgeCertificateSubjectAlternativeNames,
   },
 );
+
+new WafStack(app, "DevWafStack", {
+  applicationName: devConfig.applicationName,
+  env: {
+    region: devConfig.edgeRegion,
+  },
+  environmentName: devConfig.environmentName,
+});
 
 new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
