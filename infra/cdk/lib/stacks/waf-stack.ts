@@ -80,6 +80,31 @@ export class WafStack extends Stack {
             sampledRequestsEnabled: false,
           },
         },
+        {
+          action: { count: {} },
+          name: "ApiRateLimit",
+          priority: 40,
+          statement: {
+            rateBasedStatement: {
+              aggregateKeyType: "IP",
+              evaluationWindowSec: 300,
+              limit: 3000,
+              scopeDownStatement: {
+                byteMatchStatement: {
+                  fieldToMatch: { uriPath: {} },
+                  positionalConstraint: "STARTS_WITH",
+                  searchString: "/api/",
+                  textTransformations: [{ priority: 0, type: "NONE" }],
+                },
+              },
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: `${resourceName}-api-rate-limit`,
+            sampledRequestsEnabled: false,
+          },
+        },
       ],
       scope: "CLOUDFRONT",
       visibilityConfig: {
