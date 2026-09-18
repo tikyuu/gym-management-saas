@@ -12,10 +12,12 @@ import {
   aws_route53 as route53,
   aws_route53_targets as targets,
   aws_s3 as s3,
+  custom_resources as cr,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface CloudFrontStackProps extends StackProps {
+  albSecurityGroupId: string;
   albOriginDomainName: string;
   applicationName: string;
   edgeCertificate: acm.ICertificate;
@@ -27,6 +29,7 @@ interface CloudFrontStackProps extends StackProps {
   hostedZoneId: string;
   hostedZoneName: string;
   internalAlb: elbv2.IApplicationLoadBalancer;
+  vpcId: string;
 }
 
 export class CloudFrontStack extends Stack {
@@ -96,6 +99,35 @@ export class CloudFrontStack extends Stack {
       defaultRootObject: "index.html",
       domainNames: [props.frontendDomainName],
     });
+
+    const vpcOriginSecurityGroupLookup = new cr.AwsCustomResource(
+      this,
+      "VpcOriginSecurityGroupLookup",
+      {
+        installLatestAwsSdk: false,
+        onCreate: {
+          service: "EC2",
+          action: "describeSecurityGroups",
+          parameters: {
+            Filters: [
+              { Name: "vpc-id", Values: [props.vpcId] },
+              {
+                Name: "group-name",
+                Values: ["CloudFront-VPCOrigins-Service-SG"],
+              },
+            ],
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(
+            "CloudFront-VPCOrigins-Service-SG",
+          ),
+        },
+        policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
+          resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE,
+        }),
+      },
+    );
+
+    vpcOriginSecurityGroupLookup.node.addDependency(distribution);
 
     new route53.ARecord(this, "FrontendAliasRecord", {
       recordName: props.frontendDomainName,
