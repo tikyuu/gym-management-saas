@@ -1,5 +1,6 @@
 import {
   CfnParameter,
+  Duration,
   Stack,
   StackProps,
   Tags,
@@ -87,6 +88,7 @@ export class ApplicationStack extends Stack {
         rollback: true,
       },
       desiredCount: props.apiDesiredCount,
+      healthCheckGracePeriod: Duration.seconds(60),
       maxHealthyPercent: 200,
       minHealthyPercent: 100,
       securityGroups: [props.ecsSecurityGroup],
@@ -100,6 +102,7 @@ export class ApplicationStack extends Stack {
       "ApiTargetGroup",
       {
         healthCheck: {
+          healthyThresholdCount: 2,
           path: "/health",
         },
         port: 8000,
