@@ -31,6 +31,7 @@ interface CloudFrontStackProps extends StackProps {
   hostedZoneName: string;
   internalAlb: elbv2.IApplicationLoadBalancer;
   vpcId: string;
+  webAclArn: string;
 }
 
 export class CloudFrontStack extends Stack {
@@ -99,6 +100,7 @@ export class CloudFrontStack extends Stack {
       },
       defaultRootObject: "index.html",
       domainNames: [props.frontendDomainName],
+      webAclId: props.webAclArn,
     });
 
     const vpcOriginSecurityGroupLookup = new cr.AwsCustomResource(

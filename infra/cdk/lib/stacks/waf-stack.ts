@@ -7,12 +7,14 @@ interface WafStackProps extends StackProps {
 }
 
 export class WafStack extends Stack {
+  public readonly webAclArn: string;
+
   constructor(scope: Construct, id: string, props: WafStackProps) {
     super(scope, id, props);
 
     const resourceName = `${props.applicationName}-${props.environmentName}-web-acl`;
 
-    new wafv2.CfnWebACL(this, "WebAcl", {
+    const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
       defaultAction: { allow: {} },
       name: resourceName,
       rules: [
@@ -113,5 +115,7 @@ export class WafStack extends Stack {
         sampledRequestsEnabled: false,
       },
     });
+
+    this.webAclArn = webAcl.attrArn;
   }
 }

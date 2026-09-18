@@ -44,8 +44,9 @@ const edgeCertificateStack = new CertificateStack(
   },
 );
 
-new WafStack(app, "DevWafStack", {
+const wafStack = new WafStack(app, "DevWafStack", {
   applicationName: devConfig.applicationName,
+  crossRegionReferences: true,
   env: {
     region: devConfig.edgeRegion,
   },
@@ -166,6 +167,7 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   hostedZoneName: devConfig.hostedZoneName,
   internalAlb: applicationStack.loadBalancer,
   vpcId: networkStack.vpc.vpcId,
+  webAclArn: wafStack.webAclArn,
 });
 
 app.synth();
