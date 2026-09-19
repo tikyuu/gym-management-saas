@@ -17,6 +17,7 @@ on:
         type: choice
         options:
           - DevContainerRegistryStack
+          - DevRegionalCertificateStack
           - DevNetworkStack
           - DevApplicationStack
           - DevDatabaseStack
