@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
+import { AuditStack } from "../lib/stacks/audit-stack";
 import { ApplicationStack } from "../lib/stacks/application-stack";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
 import { CertificateStack } from "../lib/stacks/certificate-stack";
@@ -12,6 +13,14 @@ import { NetworkStack } from "../lib/stacks/network-stack";
 import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
+
+new AuditStack(app, "DevAuditStack", {
+  applicationName: devConfig.applicationName,
+  env: {
+    region: devConfig.region,
+  },
+  environmentName: devConfig.environmentName,
+});
 
 new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
   env: {
