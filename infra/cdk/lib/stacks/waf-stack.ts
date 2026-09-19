@@ -1,4 +1,11 @@
-import { Stack, StackProps, aws_wafv2 as wafv2 } from "aws-cdk-lib";
+import {
+  Duration,
+  RemovalPolicy,
+  Stack,
+  StackProps,
+  aws_logs as logs,
+  aws_wafv2 as wafv2,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface WafStackProps extends StackProps {
@@ -13,6 +20,12 @@ export class WafStack extends Stack {
     super(scope, id, props);
 
     const resourceName = `${props.applicationName}-${props.environmentName}-web-acl`;
+
+    const wafLogGroup = new logs.LogGroup(this, "WafLogGroup", {
+      logGroupName: `aws-waf-logs-${props.applicationName}-${props.environmentName}`,
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.TWO_MONTHS,
+    });
 
     const webAcl = new wafv2.CfnWebACL(this, "WebAcl", {
       defaultAction: { allow: {} },
@@ -117,5 +130,22 @@ export class WafStack extends Stack {
     });
 
     this.webAclArn = webAcl.attrArn;
+
+    new wafv2.CfnLoggingConfiguration(this, "LoggingConfiguration", {
+      logDestinationConfigs: [wafLogGroup.logGroupArn],
+      redactedFields: [
+        {
+          singleHeader: {
+            name: "authorization",
+          },
+        },
+        {
+          singleHeader: {
+            name: "cookie",
+          },
+        },
+      ],
+      resourceArn: webAcl.attrArn,
+    });
   }
 }
