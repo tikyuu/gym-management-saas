@@ -20,6 +20,7 @@ export class CiCdIdentityStack extends Stack {
           "token.actions.githubusercontent.com:ref": "refs/heads/main",
         },
       }),
+      roleName: "gym-management-dev-github-deploy-role",
     });
 
     gitHubDevDeployRole.addToPolicy(
