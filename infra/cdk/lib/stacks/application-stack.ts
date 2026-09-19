@@ -1,6 +1,8 @@
 import {
+  Aws,
   CfnParameter,
   Duration,
+  RemovalPolicy,
   Stack,
   StackProps,
   Tags,
@@ -9,6 +11,8 @@ import {
   aws_ecr as ecr,
   aws_ecs as ecs,
   aws_elasticloadbalancingv2 as elbv2,
+  aws_logs as logs,
+  aws_s3 as s3,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -46,12 +50,32 @@ export class ApplicationStack extends Stack {
     Tags.of(this).add("managed-by", "aws-cdk");
     Tags.of(this).add("component", "application");
 
+    const apiLogGroup = new logs.LogGroup(this, "ApiLogGroup", {
+      logGroupName: `/ecs/${resourceNamePrefix}-api`,
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.TWO_MONTHS,
+    });
+
+    const albAccessLogBucket = new s3.Bucket(this, "AlbAccessLogBucket", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      bucketName: `${resourceNamePrefix}-${Aws.ACCOUNT_ID}-alb-access-logs-s3`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      lifecycleRules: [
+        {
+          expiration: Duration.days(60),
+        },
+      ],
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
+
     this.cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: `${resourceNamePrefix}-ecs-cluster`,
       vpc: props.vpc,
     });
 
-    this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
+    const loadBalancer = new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
       internetFacing: false,
       loadBalancerName: `${resourceNamePrefix}-internal-alb`,
       securityGroup: props.albSecurityGroup,
@@ -60,6 +84,9 @@ export class ApplicationStack extends Stack {
         subnets: props.internalAlbSubnets,
       },
     });
+
+    loadBalancer.logAccessLogs(albAccessLogBucket);
+    this.loadBalancer = loadBalancer;
 
     const taskDefinition = new ecs.FargateTaskDefinition(
       this,
@@ -78,6 +105,10 @@ export class ApplicationStack extends Stack {
         props.repository,
         apiImageTag.valueAsString,
       ),
+      logging: ecs.LogDrivers.awsLogs({
+        logGroup: apiLogGroup,
+        streamPrefix: "api",
+      }),
       portMappings: [{ containerPort: 8000 }],
     });
 
