@@ -72,6 +72,20 @@ export class CloudFrontStack extends Stack {
       versioned: props.frontendBucketVersioned,
     });
 
+    const accessLogBucket = new s3.Bucket(this, "AccessLogBucket", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      bucketName: `${resourceNamePrefix}-${Aws.ACCOUNT_ID}-cloudfront-access-logs-s3`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      lifecycleRules: [
+        {
+          expiration: Duration.days(60),
+        },
+      ],
+      objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
+
     const apiOrigin = origins.VpcOrigin.withApplicationLoadBalancer(
       props.internalAlb,
       {
@@ -124,6 +138,10 @@ export class CloudFrontStack extends Stack {
       },
       defaultRootObject: "index.html",
       domainNames: [props.frontendDomainName],
+      enableLogging: true,
+      logBucket: accessLogBucket,
+      logFilePrefix: "cloudfront/",
+      logIncludesCookies: false,
       webAclId: props.webAclArn,
     });
 
