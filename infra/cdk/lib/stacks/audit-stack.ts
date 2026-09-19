@@ -4,6 +4,7 @@ import {
   RemovalPolicy,
   Stack,
   StackProps,
+  aws_cloudtrail as cloudtrail,
   aws_s3 as s3,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
@@ -33,6 +34,15 @@ export class AuditStack extends Stack {
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       removalPolicy: RemovalPolicy.RETAIN,
       versioned: true,
+    });
+
+    const trail = new cloudtrail.Trail(this, "Trail", {
+      bucket: cloudTrailLogBucket,
+      enableFileValidation: true,
+      includeGlobalServiceEvents: true,
+      isMultiRegionTrail: true,
+      managementEvents: cloudtrail.ReadWriteType.ALL,
+      trailName: `${resourceNamePrefix}-trail`,
     });
   }
 }
