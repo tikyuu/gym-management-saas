@@ -75,7 +75,7 @@ export class ApplicationStack extends Stack {
       vpc: props.vpc,
     });
 
-    this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
+    const loadBalancer = new elbv2.ApplicationLoadBalancer(this, "InternalAlb", {
       internetFacing: false,
       loadBalancerName: `${resourceNamePrefix}-internal-alb`,
       securityGroup: props.albSecurityGroup,
@@ -85,7 +85,8 @@ export class ApplicationStack extends Stack {
       },
     });
 
-    this.loadBalancer.logAccessLogs(albAccessLogBucket);
+    loadBalancer.logAccessLogs(albAccessLogBucket);
+    this.loadBalancer = loadBalancer;
 
     const taskDefinition = new ecs.FargateTaskDefinition(
       this,
