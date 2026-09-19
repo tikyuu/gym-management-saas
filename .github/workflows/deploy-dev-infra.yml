@@ -3,9 +3,17 @@ name: Deploy Development Infrastructure
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: 実行する操作
+        required: true
+        default: verify
+        type: choice
+        options:
+          - verify
+          - deploy
       stack_name:
         description: デプロイするCDKスタック
-        required: true
+        required: false
         type: choice
         options:
           - DevNetworkStack
@@ -36,5 +44,13 @@ jobs:
         with:
           aws-region: ap-northeast-1
           role-to-assume: arn:aws:iam::526811500752:role/gym-management-dev-github-deploy-role
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+      - name: Validate stack selection
+        if: inputs.operation == 'deploy'
+        run: |
+          test -n "${{ inputs.stack_name }}"
       - run: npm ci
+        if: inputs.operation == 'deploy'
       - run: npx cdk deploy ${{ inputs.stack_name }} --exclusively --require-approval never
+        if: inputs.operation == 'deploy'
