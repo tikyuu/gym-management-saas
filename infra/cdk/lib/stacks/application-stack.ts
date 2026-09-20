@@ -32,6 +32,7 @@ interface ApplicationStackProps extends StackProps {
 }
 
 export class ApplicationStack extends Stack {
+  public readonly apiService: ecs.FargateService;
   public readonly apiTargetGroup: elbv2.ApplicationTargetGroup;
   public readonly cluster: ecs.ICluster;
   public readonly loadBalancer: elbv2.IApplicationLoadBalancer;
@@ -128,6 +129,8 @@ export class ApplicationStack extends Stack {
       taskDefinition,
       vpcSubnets: { subnets: props.applicationSubnets },
     });
+
+    this.apiService = apiService;
 
     const apiTargetGroup = new elbv2.ApplicationTargetGroup(
       this,
