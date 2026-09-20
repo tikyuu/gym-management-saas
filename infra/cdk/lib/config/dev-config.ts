@@ -45,6 +45,7 @@ export const devConfig = {
   databaseBackupRetentionPeriod: 1,
   databaseDeletionProtection: false,
   databaseEngineVersion: "18.4",
+  databaseInstanceIdentifier: "gym-management-dev-postgresql",
   databaseInstanceClass: "db.t4g.micro",
   databaseMaxAllocatedStorage: 50,
   databaseMultiAz: false,

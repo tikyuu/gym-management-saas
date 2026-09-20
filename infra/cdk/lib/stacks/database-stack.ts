@@ -19,6 +19,7 @@ interface DatabaseStackProps extends StackProps {
   databaseBackupRetentionPeriod: number;
   databaseDeletionProtection: boolean;
   databaseEngineVersion: string;
+  databaseInstanceIdentifier: string;
   databaseInstanceClass: string;
   databaseMaxAllocatedStorage: number;
   databaseMultiAz: boolean;
@@ -45,10 +46,9 @@ export class DatabaseStack extends Stack {
     Tags.of(this).add("component", "database");
 
     const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
-    const databaseInstanceIdentifier = `${resourceNamePrefix}-postgresql`;
 
     const databaseLogGroup = new logs.LogGroup(this, "DatabaseLogGroup", {
-      logGroupName: `/aws/rds/instance/${databaseInstanceIdentifier}/postgresql`,
+      logGroupName: `/aws/rds/instance/${props.databaseInstanceIdentifier}/postgresql`,
       removalPolicy: props.databaseRemovalPolicy,
       retention: logs.RetentionDays.TWO_MONTHS,
     });
@@ -74,7 +74,7 @@ export class DatabaseStack extends Stack {
       autoMinorVersionUpgrade: props.databaseAutoMinorVersionUpgrade,
       backupRetentionPeriod: props.databaseBackupRetentionPeriod,
       deletionProtection: props.databaseDeletionProtection,
-      dbInstanceIdentifier: databaseInstanceIdentifier,
+      dbInstanceIdentifier: props.databaseInstanceIdentifier,
       dbInstanceClass: props.databaseInstanceClass,
       dbSubnetGroupName: databaseSubnetGroup.ref,
       engine: "postgres",
@@ -93,7 +93,7 @@ export class DatabaseStack extends Stack {
       tags: [
         {
           key: "Name",
-          value: databaseInstanceIdentifier,
+          value: props.databaseInstanceIdentifier,
         },
       ],
     });
