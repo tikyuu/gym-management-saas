@@ -142,6 +142,7 @@ const applicationMonitoringStack = new ApplicationMonitoringStack(
     apiService: applicationStack.apiService,
     apiTargetGroup: applicationStack.apiTargetGroup,
     applicationName: devConfig.applicationName,
+    databaseInstanceIdentifier: devConfig.databaseInstanceIdentifier,
     env: {
       region: devConfig.region,
     },
@@ -157,6 +158,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   databaseBackupRetentionPeriod: devConfig.databaseBackupRetentionPeriod,
   databaseDeletionProtection: devConfig.databaseDeletionProtection,
   databaseEngineVersion: devConfig.databaseEngineVersion,
+  databaseInstanceIdentifier: devConfig.databaseInstanceIdentifier,
   databaseInstanceClass: devConfig.databaseInstanceClass,
   databaseMaxAllocatedStorage: devConfig.databaseMaxAllocatedStorage,
   databaseMultiAz: devConfig.databaseMultiAz,

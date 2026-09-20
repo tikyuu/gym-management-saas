@@ -10,6 +10,7 @@ interface ApplicationMonitoringStackProps extends StackProps {
   apiService: ecs.FargateService;
   apiTargetGroup: elbv2.ApplicationTargetGroup;
   applicationName: string;
+  databaseInstanceIdentifier: string;
   environmentName: string;
 }
 
@@ -70,6 +71,33 @@ export class ApplicationMonitoringStack extends Stack {
     );
 
     memoryUtilizationAlarm.addAlarmAction(
+      new cloudwatchActions.SnsAction(this.alertTopic),
+    );
+
+    const databaseCpuUtilizationAlarm = new cloudwatch.Alarm(
+      this,
+      "DatabaseCpuUtilizationAlarm",
+      {
+        alarmDescription: "RDSのCPU使用率が5分間90%以上",
+        alarmName: `${resourceNamePrefix}-rds-cpu-utilization`,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        evaluationPeriods: 5,
+        metric: new cloudwatch.Metric({
+          dimensionsMap: {
+            DBInstanceIdentifier: props.databaseInstanceIdentifier,
+          },
+          metricName: "CPUUtilization",
+          namespace: "AWS/RDS",
+          period: Duration.minutes(1),
+          statistic: cloudwatch.Stats.AVERAGE,
+        }),
+        threshold: 90,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      },
+    );
+
+    databaseCpuUtilizationAlarm.addAlarmAction(
       new cloudwatchActions.SnsAction(this.alertTopic),
     );
   }
