@@ -205,6 +205,7 @@ new EdgeMonitoringStack(app, "DevEdgeMonitoringStack", {
     region: devConfig.edgeRegion,
   },
   environmentName: devConfig.environmentName,
+  webAclMetricName: wafStack.webAclMetricName,
 });
 
 new AuditStack(app, "DevAuditStack", {
