@@ -35,6 +35,7 @@ interface CloudFrontStackProps extends StackProps {
 }
 
 export class CloudFrontStack extends Stack {
+  public readonly distribution: cloudfront.Distribution;
   public readonly frontendBucket: s3.IBucket;
 
   constructor(scope: Construct, id: string, props: CloudFrontStackProps) {
@@ -144,6 +145,8 @@ export class CloudFrontStack extends Stack {
       logIncludesCookies: false,
       webAclId: props.webAclArn,
     });
+
+    this.distribution = distribution;
 
     const vpcOriginSecurityGroupLookup = new cr.AwsCustomResource(
       this,

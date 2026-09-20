@@ -7,10 +7,12 @@ import {
   aws_logs as logs,
   aws_rds as rds,
   aws_secretsmanager as secretsmanager,
+  aws_sns as sns,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 interface DatabaseStackProps extends StackProps {
+  alertTopic: sns.ITopic;
   applicationName: string;
   databaseAllocatedStorage: number;
   databaseAutoMinorVersionUpgrade: boolean;
@@ -99,6 +101,15 @@ export class DatabaseStack extends Stack {
     databaseInstance.node.addDependency(databaseLogGroup);
 
     databaseInstance.applyRemovalPolicy(props.databaseRemovalPolicy);
+
+    new rds.CfnEventSubscription(this, "FailureEventSubscription", {
+      enabled: true,
+      eventCategories: ["failure"],
+      snsTopicArn: props.alertTopic.topicArn,
+      sourceIds: [databaseInstance.ref],
+      sourceType: "db-instance",
+      subscriptionName: `${resourceNamePrefix}-rds-failure-events`,
+    });
 
     new secretsmanager.Secret(this, "ApplicationUserSecret", {
       generateSecretString: {
