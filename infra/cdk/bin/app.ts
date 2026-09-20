@@ -139,6 +139,7 @@ const applicationMonitoringStack = new ApplicationMonitoringStack(
   app,
   "DevApplicationMonitoringStack",
   {
+    apiService: applicationStack.apiService,
     apiTargetGroup: applicationStack.apiTargetGroup,
     applicationName: devConfig.applicationName,
     env: {

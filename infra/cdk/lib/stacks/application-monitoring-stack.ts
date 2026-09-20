@@ -2,10 +2,12 @@ import { Duration, Stack, StackProps } from "aws-cdk-lib";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cloudwatchActions from "aws-cdk-lib/aws-cloudwatch-actions";
 import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import { Construct } from "constructs";
 
 interface ApplicationMonitoringStackProps extends StackProps {
+  apiService: ecs.FargateService;
   apiTargetGroup: elbv2.ApplicationTargetGroup;
   applicationName: string;
   environmentName: string;
@@ -46,6 +48,28 @@ export class ApplicationMonitoringStack extends Stack {
     );
 
     healthyHostCountAlarm.addAlarmAction(
+      new cloudwatchActions.SnsAction(this.alertTopic),
+    );
+
+    const memoryUtilizationAlarm = new cloudwatch.Alarm(
+      this,
+      "MemoryUtilizationAlarm",
+      {
+        alarmDescription: "APIサービスのメモリ使用率が3分間85%以上",
+        alarmName: `${resourceNamePrefix}-ecs-memory-utilization`,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        evaluationPeriods: 3,
+        metric: props.apiService.metricMemoryUtilization({
+          period: Duration.minutes(1),
+          statistic: cloudwatch.Stats.AVERAGE,
+        }),
+        threshold: 85,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      },
+    );
+
+    memoryUtilizationAlarm.addAlarmAction(
       new cloudwatchActions.SnsAction(this.alertTopic),
     );
   }
