@@ -15,11 +15,14 @@ interface WafStackProps extends StackProps {
 
 export class WafStack extends Stack {
   public readonly webAclArn: string;
+  public readonly webAclMetricName: string;
 
   constructor(scope: Construct, id: string, props: WafStackProps) {
     super(scope, id, props);
 
     const resourceName = `${props.applicationName}-${props.environmentName}-web-acl`;
+
+    this.webAclMetricName = resourceName;
 
     const wafLogGroup = new logs.LogGroup(this, "WafLogGroup", {
       logGroupName: `aws-waf-logs-${props.applicationName}-${props.environmentName}`,

@@ -9,6 +9,7 @@ interface EdgeMonitoringStackProps extends StackProps {
   applicationName: string;
   distribution: cloudfront.Distribution;
   environmentName: string;
+  webAclMetricName: string;
 }
 
 export class EdgeMonitoringStack extends Stack {
@@ -23,6 +24,36 @@ export class EdgeMonitoringStack extends Stack {
       topicName: `${resourceNamePrefix}-edge-alerts`,
     });
 
+    const cloudFront5xxErrorRateMetric =
+      props.distribution.metric5xxErrorRate({
+        period: Duration.minutes(1),
+        statistic: cloudwatch.Stats.AVERAGE,
+      });
+
+    const wafMetricOptions = {
+      dimensionsMap: {
+        WebACL: props.webAclMetricName,
+      },
+      namespace: "AWS/WAFV2",
+      period: Duration.minutes(1),
+      statistic: cloudwatch.Stats.SUM,
+    };
+
+    const wafAllowedRequestsMetric = new cloudwatch.Metric({
+      ...wafMetricOptions,
+      metricName: "AllowedRequests",
+    });
+
+    const wafCountedRequestsMetric = new cloudwatch.Metric({
+      ...wafMetricOptions,
+      metricName: "CountedRequests",
+    });
+
+    const wafBlockedRequestsMetric = new cloudwatch.Metric({
+      ...wafMetricOptions,
+      metricName: "BlockedRequests",
+    });
+
     const cloudFront5xxErrorRateAlarm = new cloudwatch.Alarm(
       this,
       "CloudFront5xxErrorRateAlarm",
@@ -32,10 +63,7 @@ export class EdgeMonitoringStack extends Stack {
         comparisonOperator:
           cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         evaluationPeriods: 3,
-        metric: props.distribution.metric5xxErrorRate({
-          period: Duration.minutes(1),
-          statistic: cloudwatch.Stats.AVERAGE,
-        }),
+        metric: cloudFront5xxErrorRateMetric,
         threshold: 5,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       },
@@ -43,6 +71,27 @@ export class EdgeMonitoringStack extends Stack {
 
     cloudFront5xxErrorRateAlarm.addAlarmAction(
       new cloudwatchActions.SnsAction(this.alertTopic),
+    );
+
+    const edgeDashboard = new cloudwatch.Dashboard(this, "EdgeDashboard", {
+      dashboardName: `${resourceNamePrefix}-edge-dashboard`,
+    });
+
+    edgeDashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        left: [cloudFront5xxErrorRateMetric],
+        title: "CloudFront 5xxエラー率",
+        width: 12,
+      }),
+      new cloudwatch.GraphWidget({
+        left: [
+          wafAllowedRequestsMetric,
+          wafCountedRequestsMetric,
+          wafBlockedRequestsMetric,
+        ],
+        title: "WAF リクエスト数",
+        width: 12,
+      }),
     );
   }
 }
