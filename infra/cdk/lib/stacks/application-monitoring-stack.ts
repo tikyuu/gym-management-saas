@@ -30,6 +30,27 @@ export class ApplicationMonitoringStack extends Stack {
       topicName: `${resourceNamePrefix}-alerts`,
     });
 
+    const healthyHostCountMetric =
+      props.apiTargetGroup.metricHealthyHostCount({
+        period: Duration.minutes(1),
+        statistic: cloudwatch.Stats.MAXIMUM,
+      });
+
+    const memoryUtilizationMetric = props.apiService.metricMemoryUtilization({
+      period: Duration.minutes(1),
+      statistic: cloudwatch.Stats.AVERAGE,
+    });
+
+    const databaseCpuUtilizationMetric = new cloudwatch.Metric({
+      dimensionsMap: {
+        DBInstanceIdentifier: props.databaseInstanceIdentifier,
+      },
+      metricName: "CPUUtilization",
+      namespace: "AWS/RDS",
+      period: Duration.minutes(1),
+      statistic: cloudwatch.Stats.AVERAGE,
+    });
+
     const healthyHostCountAlarm = new cloudwatch.Alarm(
       this,
       "HealthyHostCountAlarm",
@@ -39,10 +60,7 @@ export class ApplicationMonitoringStack extends Stack {
         comparisonOperator:
           cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
         evaluationPeriods: 2,
-        metric: props.apiTargetGroup.metricHealthyHostCount({
-          period: Duration.minutes(1),
-          statistic: cloudwatch.Stats.MAXIMUM,
-        }),
+        metric: healthyHostCountMetric,
         threshold: 0,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       },
@@ -61,10 +79,7 @@ export class ApplicationMonitoringStack extends Stack {
         comparisonOperator:
           cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         evaluationPeriods: 3,
-        metric: props.apiService.metricMemoryUtilization({
-          period: Duration.minutes(1),
-          statistic: cloudwatch.Stats.AVERAGE,
-        }),
+        metric: memoryUtilizationMetric,
         threshold: 85,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       },
@@ -83,15 +98,7 @@ export class ApplicationMonitoringStack extends Stack {
         comparisonOperator:
           cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         evaluationPeriods: 5,
-        metric: new cloudwatch.Metric({
-          dimensionsMap: {
-            DBInstanceIdentifier: props.databaseInstanceIdentifier,
-          },
-          metricName: "CPUUtilization",
-          namespace: "AWS/RDS",
-          period: Duration.minutes(1),
-          statistic: cloudwatch.Stats.AVERAGE,
-        }),
+        metric: databaseCpuUtilizationMetric,
         threshold: 90,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       },
@@ -99,6 +106,32 @@ export class ApplicationMonitoringStack extends Stack {
 
     databaseCpuUtilizationAlarm.addAlarmAction(
       new cloudwatchActions.SnsAction(this.alertTopic),
+    );
+
+    const applicationDashboard = new cloudwatch.Dashboard(
+      this,
+      "ApplicationDashboard",
+      {
+        dashboardName: `${resourceNamePrefix}-application-dashboard`,
+      },
+    );
+
+    applicationDashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        left: [healthyHostCountMetric],
+        title: "ALB 正常なECSタスク数",
+        width: 8,
+      }),
+      new cloudwatch.GraphWidget({
+        left: [memoryUtilizationMetric],
+        title: "ECS メモリ使用率",
+        width: 8,
+      }),
+      new cloudwatch.GraphWidget({
+        left: [databaseCpuUtilizationMetric],
+        title: "RDS CPU使用率",
+        width: 8,
+      }),
     );
   }
 }
