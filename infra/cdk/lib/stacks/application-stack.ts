@@ -32,6 +32,7 @@ interface ApplicationStackProps extends StackProps {
 }
 
 export class ApplicationStack extends Stack {
+  public readonly apiTargetGroup: elbv2.ApplicationTargetGroup;
   public readonly cluster: ecs.ICluster;
   public readonly loadBalancer: elbv2.IApplicationLoadBalancer;
 
@@ -143,6 +144,8 @@ export class ApplicationStack extends Stack {
         vpc: props.vpc,
       },
     );
+
+    this.apiTargetGroup = apiTargetGroup;
 
     this.loadBalancer.addListener("HttpsListener", {
       certificates: [props.certificate],
