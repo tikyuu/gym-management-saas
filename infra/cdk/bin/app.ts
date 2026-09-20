@@ -16,14 +16,6 @@ import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
 
-new EdgeMonitoringStack(app, "DevEdgeMonitoringStack", {
-  applicationName: devConfig.applicationName,
-  env: {
-    region: devConfig.edgeRegion,
-  },
-  environmentName: devConfig.environmentName,
-});
-
 new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
   env: {
     region: devConfig.region,
@@ -143,16 +135,21 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   vpc: networkStack.vpc,
 });
 
-new ApplicationMonitoringStack(app, "DevApplicationMonitoringStack", {
-  apiTargetGroup: applicationStack.apiTargetGroup,
-  applicationName: devConfig.applicationName,
-  env: {
-    region: devConfig.region,
+const applicationMonitoringStack = new ApplicationMonitoringStack(
+  app,
+  "DevApplicationMonitoringStack",
+  {
+    apiTargetGroup: applicationStack.apiTargetGroup,
+    applicationName: devConfig.applicationName,
+    env: {
+      region: devConfig.region,
+    },
+    environmentName: devConfig.environmentName,
   },
-  environmentName: devConfig.environmentName,
-});
+);
 
 new DatabaseStack(app, "DevDatabaseStack", {
+  alertTopic: applicationMonitoringStack.alertTopic,
   applicationName: devConfig.applicationName,
   databaseAllocatedStorage: devConfig.databaseAllocatedStorage,
   databaseAutoMinorVersionUpgrade: devConfig.databaseAutoMinorVersionUpgrade,
@@ -195,6 +192,16 @@ const cloudFrontStack = new CloudFrontStack(app, "DevCloudFrontStack", {
   internalAlb: applicationStack.loadBalancer,
   vpcId: networkStack.vpc.vpcId,
   webAclArn: wafStack.webAclArn,
+});
+
+new EdgeMonitoringStack(app, "DevEdgeMonitoringStack", {
+  applicationName: devConfig.applicationName,
+  crossRegionReferences: true,
+  distribution: cloudFrontStack.distribution,
+  env: {
+    region: devConfig.edgeRegion,
+  },
+  environmentName: devConfig.environmentName,
 });
 
 new AuditStack(app, "DevAuditStack", {
