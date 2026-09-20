@@ -14,14 +14,6 @@ import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
 
-new AuditStack(app, "DevAuditStack", {
-  applicationName: devConfig.applicationName,
-  env: {
-    region: devConfig.region,
-  },
-  environmentName: devConfig.environmentName,
-});
-
 new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
   env: {
     region: devConfig.region,
@@ -164,7 +156,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
 });
 
-new CloudFrontStack(app, "DevCloudFrontStack", {
+const cloudFrontStack = new CloudFrontStack(app, "DevCloudFrontStack", {
   albSecurityGroupId: networkStack.albSecurityGroup.securityGroupId,
   albOriginDomainName: devConfig.albOriginDomainName,
   applicationName: devConfig.applicationName,
@@ -184,6 +176,15 @@ new CloudFrontStack(app, "DevCloudFrontStack", {
   internalAlb: applicationStack.loadBalancer,
   vpcId: networkStack.vpc.vpcId,
   webAclArn: wafStack.webAclArn,
+});
+
+new AuditStack(app, "DevAuditStack", {
+  applicationName: devConfig.applicationName,
+  env: {
+    region: devConfig.region,
+  },
+  environmentName: devConfig.environmentName,
+  frontendBucket: cloudFrontStack.frontendBucket,
 });
 
 app.synth();

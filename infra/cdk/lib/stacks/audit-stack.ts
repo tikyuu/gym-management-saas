@@ -12,6 +12,7 @@ import { Construct } from "constructs";
 interface AuditStackProps extends StackProps {
   applicationName: string;
   environmentName: string;
+  frontendBucket: s3.IBucket;
 }
 
 export class AuditStack extends Stack {
@@ -44,5 +45,41 @@ export class AuditStack extends Stack {
       managementEvents: cloudtrail.ReadWriteType.ALL,
       trailName: `${resourceNamePrefix}-trail`,
     });
+
+    const cloudFormationTrail = trail.node.defaultChild as cloudtrail.CfnTrail;
+
+    cloudFormationTrail.addPropertyDeletionOverride("EventSelectors");
+    cloudFormationTrail.advancedEventSelectors = [
+      {
+        fieldSelectors: [
+          {
+            equalTo: ["Management"],
+            field: "eventCategory",
+          },
+        ],
+        name: "LogManagementEvents",
+      },
+      {
+        fieldSelectors: [
+          {
+            equalTo: ["Data"],
+            field: "eventCategory",
+          },
+          {
+            equalTo: ["AWS::S3::Object"],
+            field: "resources.type",
+          },
+          {
+            equalTo: ["PutObject", "DeleteObject"],
+            field: "eventName",
+          },
+          {
+            field: "resources.ARN",
+            startsWith: [`${props.frontendBucket.bucketArn}/`],
+          },
+        ],
+        name: "LogFrontendS3Writes",
+      },
+    ];
   }
 }
