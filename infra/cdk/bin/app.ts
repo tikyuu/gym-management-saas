@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
+import { ApplicationMonitoringStack } from "../lib/stacks/application-monitoring-stack";
 import { AuditStack } from "../lib/stacks/audit-stack";
 import { ApplicationStack } from "../lib/stacks/application-stack";
 import { AuthenticationStack } from "../lib/stacks/authentication-stack";
@@ -9,10 +10,19 @@ import { CiCdIdentityStack } from "../lib/stacks/ci-cd-identity-stack";
 import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
+import { EdgeMonitoringStack } from "../lib/stacks/edge-monitoring-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
 import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
+
+new EdgeMonitoringStack(app, "DevEdgeMonitoringStack", {
+  applicationName: devConfig.applicationName,
+  env: {
+    region: devConfig.edgeRegion,
+  },
+  environmentName: devConfig.environmentName,
+});
 
 new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
   env: {
@@ -131,6 +141,15 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   taskCpu: devConfig.apiTaskCpu,
   taskMemoryMiB: devConfig.apiTaskMemoryMiB,
   vpc: networkStack.vpc,
+});
+
+new ApplicationMonitoringStack(app, "DevApplicationMonitoringStack", {
+  apiTargetGroup: applicationStack.apiTargetGroup,
+  applicationName: devConfig.applicationName,
+  env: {
+    region: devConfig.region,
+  },
+  environmentName: devConfig.environmentName,
 });
 
 new DatabaseStack(app, "DevDatabaseStack", {
