@@ -21,6 +21,8 @@
 | `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | スタッフが権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/staff/me/work-shifts` | スタッフ自身の勤務予定を取得する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/complete` | スタッフが予約を来店完了にする | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/no-show` | スタッフが予約を無断欠席にする | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me` | スタッフ自身のプロフィールと操作範囲を取得する | Cognitoアクセストークン |
@@ -572,6 +574,90 @@ HTTPステータス`200 OK`で、キャンセル結果を返す。
 | `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
 | `403 Forbidden` | スタッフではない、または有効な役割・店舗所属がない |
 | `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
+| `422 Unprocessable Content` | 日付形式が不正、`from`が`to`より後、または期間が31日を超える |
+
+## スタッフ予約詳細の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | ログイン中のスタッフが、権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
+
+スタッフ用カレンダーで予約を選択したときに呼び出す。トレーナーは自分が担当する予約だけを取得できる。店舗管理者は担当店舗の予約、事業者管理者は事業者内の全店舗の予約を取得できる。
+
+```json
+{
+  "id": "reservation_001",
+  "status": "confirmed",
+  "starts_at": "2026-10-10T10:00:00+09:00",
+  "ends_at": "2026-10-10T11:00:00+09:00",
+  "store": {
+    "id": "store_001",
+    "name": "渋谷店"
+  },
+  "member": {
+    "id": "member_001",
+    "name": "山田 太郎"
+  },
+  "trainer": {
+    "id": "staff_001",
+    "name": "佐藤 花子"
+  },
+  "menu": {
+    "id": "menu_001",
+    "name": "パーソナルトレーニング 60分",
+    "duration_minutes": 60
+  }
+}
+```
+
+電話番号、生年月日、契約料金および利用回数など、スタッフの予約対応に不要な会員・契約情報は返さない。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | スタッフではない、または有効な役割・店舗所属がない |
+| `404 Not Found` | 予約が存在しない、または担当範囲外 |
+
+## スタッフ勤務予定の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/staff/me/work-shifts` | ログイン中のスタッフ自身の勤務予定を取得する | Cognitoアクセストークン |
+
+スタッフ用の勤務予定画面を開くときに呼び出す。自分自身の勤務予定だけを返すため、店舗管理者や事業者管理者であっても他スタッフの予定は返さない。
+
+| クエリパラメータ | 必須 | 意味 |
+| --- | --- | --- |
+| `from` | はい | 表示開始日。`YYYY-MM-DD`形式 |
+| `to` | はい | 表示終了日。`from`から最大31日間 |
+
+```json
+{
+  "items": [
+    {
+      "id": "shift_001",
+      "status": "scheduled",
+      "starts_at": "2026-10-10T09:00:00+09:00",
+      "ends_at": "2026-10-10T18:00:00+09:00",
+      "store": {
+        "id": "store_001",
+        "name": "渋谷店"
+      }
+    }
+  ]
+}
+```
+
+`scheduled`と`cancelled`を返す。勤務時間内の休憩・研修などの予約不可時間は予約枠の計算にのみ使用し、このAPIでは返さない。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | スタッフではない、または有効なスタッフプロフィールがない |
 | `422 Unprocessable Content` | 日付形式が不正、`from`が`to`より後、または期間が31日を超える |
 
 ## スタッフによる予約状態の変更
