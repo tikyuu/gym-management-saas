@@ -17,6 +17,10 @@
 | `GET` | `/api/v1/stores/{store_id}/availability` | 選択した店舗・メニューの予約可能時間を取得する | Cognitoアクセストークン |
 | `POST` | `/api/v1/reservations` | 会員の予約を作成する | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/reservations` | 会員自身の予約一覧を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/members/me/reservations/{reservation_id}` | 会員自身の予約詳細を取得する | Cognitoアクセストークン |
+| `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
+| `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me` | スタッフ自身のプロフィールと操作範囲を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/system-admin/me` | SaaS運営管理者自身の情報を取得する | Cognitoアクセストークン |
 
@@ -419,3 +423,193 @@ HTTPステータス`201 Created`で、作成した予約を返す。
 | `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
 | `403 Forbidden` | 会員以外が呼び出した |
 | `422 Unprocessable Content` | `scope`、`limit`または`cursor`の形式が不正 |
+
+## 会員予約のキャンセル
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/reservations/{reservation_id}/cancel` | ログイン中の会員自身の予約をキャンセルする | Cognitoアクセストークン |
+
+予約一覧画面で会員がキャンセルを確定したときに呼び出す。対象は、開始時刻より前の`confirmed`予約だけとする。
+
+### リクエスト
+
+キャンセル理由は任意とする。
+
+```json
+{
+  "reason": "都合が悪くなったため"
+}
+```
+
+理由を入力しない場合は、空のJSONオブジェクト`{}`を送る。
+
+予約状態を`cancelled`へ変更し、状態変更履歴を記録する。無料キャンセル期限までなら、利用回数制プランで確保中の1回分を利用可能回数へ戻す。期限後かつ開始時刻より前なら、確保中の1回分を利用済みとして消費する。通い放題プランでは利用回数を操作しない。これらは1つのトランザクションで処理する。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、キャンセル結果を返す。
+
+```json
+{
+  "id": "reservation_001",
+  "status": "cancelled",
+  "usage_result": "returned"
+}
+```
+
+| `usage_result` | 意味 |
+| --- | --- |
+| `returned` | 無料キャンセル期限内のため、確保していた回数を利用可能回数へ戻した |
+| `consumed` | 無料キャンセル期限後のため、確保していた回数を消費した |
+| `not_applicable` | 通い放題プランのため、利用回数の対象外 |
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `404 Not Found` | 予約が存在しない、または本人の予約ではない |
+| `409 Conflict` | すでにキャンセル済み、完了済み、無断欠席、または開始時刻を過ぎている |
+| `422 Unprocessable Content` | 任意の`reason`の形式が不正 |
+
+## 会員契約内容の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- |
+| `GET` | `/api/v1/members/me/contracts` | ログイン中の会員自身の現在・将来の契約内容と利用状況を取得する | Cognitoアクセストークン |
+
+会員ホームから契約・利用状況画面を開いたときに呼び出す。現在の`active`契約と、将来開始する`scheduled`契約だけを返す。終了、解約済みなどの契約履歴はPhase 1では返さない。
+
+```json
+{
+  "items": [
+    {
+      "id": "contract_001",
+      "status": "active",
+      "plan_name": "月4回プラン",
+      "price_yen": 30000,
+      "starts_on": "2026-10-01",
+      "ends_on": "2026-10-31",
+      "usage": {
+        "type": "count_based",
+        "available_count": 3,
+        "reserved_count": 1
+      }
+    }
+  ]
+}
+```
+
+料金、プラン名および契約期間は、契約時に保存したプラン条件を返す。後からプラン設定が変更されても、既存契約の表示内容は変更しない。
+
+`usage.type`が`unlimited`の場合は、`available_count`と`reserved_count`を含めない。
+
+```json
+{
+  "type": "unlimited"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 会員以外が呼び出した |
+
+現在・将来の契約がない場合は、`200 OK`で`items`を空配列`[]`として返す。
+
+## スタッフ予約一覧の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/staff/me/reservations` | ログイン中のスタッフが、権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
+
+スタッフ用カレンダー画面を開くときに呼び出す。Reactは返された予約を、開始・終了時刻に基づいてカレンダーへ配置する。
+
+| クエリパラメータ | 必須 | 意味 |
+| --- | --- | --- |
+| `from` | はい | 表示開始日。`YYYY-MM-DD`形式 |
+| `to` | はい | 表示終了日。`YYYY-MM-DD`形式。`from`から最大31日間 |
+| `store_id` | いいえ | 表示対象の店舗。指定しない場合は権限範囲内の全店舗 |
+
+トレーナーには自分が担当する予約だけを返す。店舗管理者には担当店舗の予約、事業者管理者には事業者内の全店舗の予約を返す。担当外の店舗や他事業者の予約は、`store_id`を指定しても返さない。
+
+```json
+{
+  "items": [
+    {
+      "id": "reservation_001",
+      "status": "confirmed",
+      "starts_at": "2026-10-10T10:00:00+09:00",
+      "ends_at": "2026-10-10T11:00:00+09:00",
+      "store": {
+        "id": "store_001",
+        "name": "渋谷店"
+      },
+      "member": {
+        "id": "member_001",
+        "name": "山田 太郎"
+      },
+      "menu": {
+        "id": "menu_001",
+        "name": "パーソナルトレーニング 60分"
+      }
+    }
+  ]
+}
+```
+
+`confirmed`、`completed`、`no_show`および`cancelled`を返す。電話番号、生年月日、契約料金など、トレーナー業務に不要な会員情報は返さない。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | スタッフではない、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
+| `422 Unprocessable Content` | 日付形式が不正、`from`が`to`より後、または期間が31日を超える |
+
+## 会員予約詳細の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/members/me/reservations/{reservation_id}` | ログイン中の会員自身の予約詳細を取得する | Cognitoアクセストークン |
+
+会員が予約一覧から1件を選択したときに呼び出す。
+
+```json
+{
+  "id": "reservation_001",
+  "status": "confirmed",
+  "store": {
+    "id": "store_001",
+    "name": "渋谷店",
+    "address": "東京都渋谷区..."
+  },
+  "menu": {
+    "id": "menu_001",
+    "name": "パーソナルトレーニング 60分",
+    "duration_minutes": 60
+  },
+  "trainer": {
+    "id": "staff_001",
+    "name": "山田 花子"
+  },
+  "starts_at": "2026-10-10T10:00:00+09:00",
+  "ends_at": "2026-10-10T11:00:00+09:00",
+  "free_cancellation_until": "2026-10-09T10:00:00+09:00",
+  "can_cancel": true
+}
+```
+
+`free_cancellation_until`は、予約作成時に保存したキャンセル規定から算出する。店舗のキャンセル規定が後から変更されても、既存予約の期限は変更しない。`can_cancel`が`true`の場合だけ、会員画面でキャンセル操作を表示する。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `404 Not Found` | 予約が存在しない、または本人の予約ではない |
