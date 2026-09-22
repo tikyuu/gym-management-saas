@@ -21,6 +21,8 @@
 | `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/me/reservations/{reservation_id}/complete` | スタッフが予約を来店完了にする | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/me/reservations/{reservation_id}/no-show` | スタッフが予約を無断欠席にする | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me` | スタッフ自身のプロフィールと操作範囲を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/system-admin/me` | SaaS運営管理者自身の情報を取得する | Cognitoアクセストークン |
 
@@ -571,6 +573,39 @@ HTTPステータス`200 OK`で、キャンセル結果を返す。
 | `403 Forbidden` | スタッフではない、または有効な役割・店舗所属がない |
 | `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
 | `422 Unprocessable Content` | 日付形式が不正、`from`が`to`より後、または期間が31日を超える |
+
+## スタッフによる予約状態の変更
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/me/reservations/{reservation_id}/complete` | 来店・利用完了を記録する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/me/reservations/{reservation_id}/no-show` | 無断欠席を記録する | Cognitoアクセストークン |
+
+予約開始後の`confirmed`予約だけを対象にする。通常の来店完了・無断欠席ではリクエスト本文を受け取らない。
+
+トレーナーは自分が担当する予約だけを変更できる。店舗管理者は担当店舗の予約、事業者管理者は事業者内の全店舗の予約を変更できる。
+
+`complete`では予約状態を`completed`へ、`no-show`では`no_show`へ変更する。利用回数制プランでは、確保中の回数を利用済みにする。通い放題プランでは利用回数を操作しない。状態変更、利用回数処理および状態変更履歴の記録は、1つのトランザクションで処理する。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、変更後の予約状態を返す。
+
+```json
+{
+  "id": "reservation_001",
+  "status": "completed"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | スタッフではない、または有効な役割がない |
+| `404 Not Found` | 予約が存在しない、または担当範囲外 |
+| `409 Conflict` | 予約が`confirmed`ではない、または開始時刻前 |
 
 ## 会員予約詳細の取得
 
