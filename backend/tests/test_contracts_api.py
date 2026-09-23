@@ -345,6 +345,32 @@ def test_unlimited_approval_has_no_usage_grant(contract_environment) -> None:
         assert not session.scalars(select(UsageEntry)).all()
 
 
+def test_contract_lists_details_and_termination(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    assert applied.status_code == 201
+    contract_id = applied.json()["id"]
+    mine = client.get("/api/v1/members/me/contracts")
+    assert mine.status_code == 200
+    assert mine.json()["items"][0]["plan_name"] == "月2回"
+    assert mine.json()["items"][0]["usage"]["available_count"] == 0
+    identity["current"] = users["admin"]
+    listed = client.get("/api/v1/management/contracts")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["id"] == contract_id
+    assert client.get(f"/api/v1/management/contracts/{contract_id}").status_code == 200
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/terminate", json={"reason": "終了"}).status_code == 409
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/approve", json={}).status_code == 200
+    terminated = client.post(f"/api/v1/management/contracts/{contract_id}/terminate", json={"reason": "終了"})
+    assert terminated.status_code == 200
+    assert terminated.json()["status"] == "terminated"
+    with Session(engine) as session:
+        history = session.scalars(select(ContractStatusHistory).where(ContractStatusHistory.contract_id == UUID(contract_id))).all()
+        assert len(history) == 2
+    identity["current"] = users["member"]
+    assert client.get("/api/v1/members/me/contracts?scope=history").json()["items"][0]["status"] == "terminated"
+
+
 def test_application_rejects_inactive_plan_or_member(contract_environment) -> None:
     client, engine, identifiers, _, _ = contract_environment
     with Session(engine) as session:
