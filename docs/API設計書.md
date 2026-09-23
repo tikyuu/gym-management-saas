@@ -20,6 +20,7 @@
 | `GET` | `/api/v1/members/me/reservations/{reservation_id}` | 会員自身の予約詳細を取得する | Cognitoアクセストークン |
 | `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/staff` | 管理者が権限範囲内のスタッフ一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | スタッフが権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/work-shifts` | スタッフ自身の勤務予定を取得する | Cognitoアクセストークン |
@@ -199,6 +200,49 @@ SaaS運営管理者の場合:
 | `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
 | `403 Forbidden` | スタッフが招待中または利用停止中 |
 | `404 Not Found` | 認証済みだが、対応するスタッフプロフィールが見つからない |
+
+## 管理者向けスタッフ一覧の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/staff` | ログイン中の管理者が、権限範囲内のスタッフ一覧を取得する | Cognitoアクセストークン |
+
+勤務予定の登録画面などで、対象スタッフを選択するときに呼び出す。店舗管理者は担当店舗に有効所属するスタッフ、事業者管理者は事業者内のスタッフを取得できる。トレーナーは呼び出せない。
+
+| クエリパラメータ | 必須 | 意味 |
+| --- | --- | --- |
+| `store_id` | いいえ | 対象店舗。指定すると、その店舗に有効所属するスタッフだけを返す |
+| `status` | いいえ | `active`、`invited`または`inactive`。指定しない場合は`active` |
+
+```json
+{
+  "items": [
+    {
+      "id": "staff_001",
+      "name": "佐藤 花子",
+      "status": "active",
+      "stores": [
+        {
+          "id": "store_001",
+          "name": "渋谷店",
+          "roles": ["trainer"]
+        }
+      ]
+    }
+  ]
+}
+```
+
+勤務予定の登録候補として使用する場合は、`status=active`かつ選択店舗に有効所属するスタッフだけを選択できる。メールアドレス、電話番号、Cognitoの識別子など、一覧表示に不要な情報は返さない。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 店舗管理者・事業者管理者ではない、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
+| `422 Unprocessable Content` | `status`の値が不正 |
 
 ## SaaS運営管理者プロフィール
 
