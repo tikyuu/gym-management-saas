@@ -44,6 +44,11 @@ class OrganizationStatusHistory(Base):
         Uuid,
         ForeignKey("organizations.id"),
     )
+    executed_by_account_id: Mapped[UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("user_accounts.id"),
+        nullable=True,
+    )
     previous_status: Mapped[OrganizationStatus] = mapped_column(
         Enum(OrganizationStatus, name="organization_status"),
     )
