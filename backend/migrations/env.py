@@ -8,6 +8,8 @@ import app.models.catalog
 import app.models.contract
 import app.models.member
 import app.models.organization
+import app.models.reservation
+import app.models.scheduling
 import app.models.staff
 import app.models.store
 import app.models.user_account
