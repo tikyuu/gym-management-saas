@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth.cognito import AuthenticatedUser, get_current_user
 from app.database import get_db_session
 from app.models.member import Member
+from app.models.organization import SystemAdmin
 from app.models.staff import (
     Staff,
     StaffRole,
@@ -45,6 +46,11 @@ class StaffCurrentUserResponse(BaseModel):
     roles: list[StaffRoleResponse]
 
 
+class SystemAdminCurrentUserResponse(BaseModel):
+    user_type: Literal["system_admin"] = "system_admin"
+    display_name: str
+
+
 def get_active_account(
     current_user: AuthenticatedUser,
     db_session: Session,
@@ -66,13 +72,13 @@ def get_active_account(
 
 @router.get(
     "/me",
-    response_model=CurrentUserResponse | MemberCurrentUserResponse | StaffCurrentUserResponse,
+    response_model=CurrentUserResponse | MemberCurrentUserResponse | StaffCurrentUserResponse | SystemAdminCurrentUserResponse,
     response_model_exclude_none=True,
 )
 def get_me(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db_session: Annotated[Session, Depends(get_db_session)],
-) -> CurrentUserResponse | MemberCurrentUserResponse | StaffCurrentUserResponse:
+) -> CurrentUserResponse | MemberCurrentUserResponse | StaffCurrentUserResponse | SystemAdminCurrentUserResponse:
     account = get_active_account(current_user, db_session)
     member = db_session.scalar(select(Member).where(Member.account_id == account.id))
     if member is not None:
@@ -115,6 +121,10 @@ def get_me(
                 for role, store_id in active_roles
             ],
         )
+
+    admin = db_session.scalar(select(SystemAdmin).where(SystemAdmin.account_id == account.id))
+    if admin is not None:
+        return SystemAdminCurrentUserResponse(display_name=admin.name)
 
     return CurrentUserResponse(
         cognito_sub=current_user.cognito_sub,

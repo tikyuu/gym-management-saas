@@ -7,10 +7,12 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    JSON,
     String,
     UniqueConstraint,
     Uuid,
     func,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -73,3 +75,25 @@ class Member(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class MemberConsent(Base):
+    __tablename__ = "member_consents"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    member_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("members.id"))
+    document_version: Mapped[str] = mapped_column(String(64))
+    accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MemberAuditHistory(Base):
+    __tablename__ = "member_audit_histories"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    member_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("members.id"))
+    executed_by_account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"))
+    action: Mapped[str] = mapped_column(String(64))
+    previous_values: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    new_values: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

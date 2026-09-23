@@ -26,10 +26,10 @@ from app.models.catalog import (
     StoreMenu,
     TrainerMenu,
 )
-from app.models.contract import Contract, ContractStatus, ContractStatusHistory
+from app.models.contract import Contract, ContractAdjustmentHistory, ContractStatus, ContractStatusHistory
 from app.models.member import Member, MemberStatus
 from app.models.organization import Organization, OrganizationStatus
-from app.models.reservation import Reservation, ReservationStatusHistory, UsageEntry, UsageEntryType
+from app.models.reservation import Reservation, ReservationStatus, ReservationStatusHistory, UsageEntry, UsageEntryType
 from app.models.scheduling import UnavailablePeriod, WorkShift
 from app.models.staff import Staff, StaffRole, StaffRoleType, StaffStatus, StaffStoreMembership
 from app.models.store import Store, StoreRegularHour, StoreSpecialDay, StoreSpecialDayHour, StoreStatus
@@ -63,6 +63,7 @@ def contract_environment():
         PlanMenu.__table__,
         Contract.__table__,
         ContractStatusHistory.__table__,
+        ContractAdjustmentHistory.__table__,
         Staff.__table__,
         StaffStoreMembership.__table__,
         StaffRole.__table__,
@@ -273,6 +274,51 @@ def test_application_approval_and_booking_share_approved_grant(contract_environm
     assert booking.status_code == 201
     with Session(engine) as session:
         assert len(session.scalars(select(UsageEntry)).all()) == 2
+
+
+def test_manager_adjusts_contract_usage_and_period_with_history(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    contract_id = applied.json()["id"]
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/approve", json={}).status_code == 200
+    path = f"/api/v1/management/contracts/{contract_id}/adjustments"
+    assert client.post(path, json={"reason": "補填", "usage_delta": -3}).status_code == 409
+    adjusted = client.post(path, json={"reason": "補填", "usage_delta": 1})
+    assert adjusted.status_code == 200, adjusted.text
+    assert adjusted.json()["usage"]["available_count"] == 3
+    extended = client.post(path, json={"reason": "延長", "ends_on": "2030-11-30"})
+    assert extended.status_code == 200, extended.text
+    assert extended.json()["ends_on"] == "2030-11-30"
+    with Session(engine) as session:
+        assert len(session.scalars(select(ContractAdjustmentHistory)).all()) == 2
+        assert len(session.scalars(select(UsageEntry)).all()) == 2
+
+
+def test_manager_corrects_reservation_and_reconciles_usage(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{applied.json()['id']}/approve", json={}).status_code == 200
+    identity["current"] = users["member"]
+    booking = client.post("/api/v1/reservations", json={
+        "store_id": str(identifiers["store_id"]),
+        "menu_id": str(identifiers["menu_id"]),
+        "starts_at": BOOKING_TIME.isoformat(),
+    })
+    assert booking.status_code == 201, booking.text
+    identity["current"] = users["admin"]
+    path = f"/api/v1/management/reservations/{booking.json()['id']}/correct-status"
+    cancelled = client.post(path, json={"status": "cancelled", "reason": "誤登録"})
+    assert cancelled.status_code == 200, cancelled.text
+    restored = client.post(path, json={"status": "confirmed", "reason": "誤取消"})
+    assert restored.status_code == 200, restored.text
+    with Session(engine) as session:
+        reservation = session.get(Reservation, UUID(booking.json()["id"]))
+        assert reservation.status == ReservationStatus.CONFIRMED
+        entries = session.scalars(select(UsageEntry).where(UsageEntry.reservation_id == reservation.id)).all()
+        assert sum(entry.available_usage_delta for entry in entries) == -1
+        assert sum(entry.reserved_usage_delta for entry in entries) == 1
 
 
 def test_rejection_records_reason_and_allows_new_application(contract_environment) -> None:

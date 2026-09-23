@@ -5,7 +5,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -25,7 +25,7 @@ from app.models.catalog import (
     PlanUsageType,
     StoreMenu,
 )
-from app.models.contract import Contract, ContractStatus, ContractStatusHistory
+from app.models.contract import Contract, ContractAdjustmentHistory, ContractStatus, ContractStatusHistory
 from app.models.member import Member, MemberStatus
 from app.models.organization import Organization, OrganizationStatus
 from app.models.reservation import Reservation, ReservationStatus, UsageEntry, UsageEntryType
@@ -84,6 +84,21 @@ class ContractReason(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     reason: str = Field(min_length=1, max_length=1000)
+
+
+class ContractAdjustment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=1, max_length=1000)
+    ends_on: date | None = None
+    usage_delta: int | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_adjustment(self):
+        if (self.ends_on is None) == (self.usage_delta is None):
+            raise ValueError("Specify either ends_on or usage_delta.")
+        if self.usage_delta == 0:
+            raise ValueError("usage_delta must not be zero.")
+        return self
 
 
 def contract_usage(contract: Contract, db_session: Session) -> dict:
@@ -534,3 +549,71 @@ def terminate_contract(
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> ContractResponse:
     return change_contract_status(contract_id, request.reason, ContractStatus.TERMINATED, {ContractStatus.SCHEDULED, ContractStatus.ACTIVE, ContractStatus.PAUSED}, current_user, db_session)
+
+
+@router.post("/management/contracts/{contract_id}/adjustments")
+def adjust_contract(
+    contract_id: UUID,
+    request: ContractAdjustment,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    contract, staff = management_contract(contract_id, current_user, db_session)
+    if contract.status not in (ContractStatus.SCHEDULED, ContractStatus.ACTIVE, ContractStatus.PAUSED):
+        raise HTTPException(status_code=409, detail="Contract cannot be adjusted.")
+    if request.ends_on is not None:
+        if request.ends_on < contract.starts_on:
+            raise HTTPException(status_code=422, detail="ends_on is before starts_on.")
+        confirmed_reservations = db_session.scalars(select(Reservation).where(
+            Reservation.contract_id == contract.id,
+            Reservation.status == ReservationStatus.CONFIRMED,
+        )).all()
+        if any(reservation.starts_at.astimezone(JAPAN_TIMEZONE).date() > request.ends_on
+               for reservation in confirmed_reservations):
+            raise HTTPException(status_code=409, detail="Confirmed reservations fall outside the new period.")
+        other = db_session.scalar(select(Contract.id).where(
+            Contract.id != contract.id,
+            Contract.member_id == contract.member_id,
+            Contract.status.in_(ACTIVE_CONTRACT_STATUSES),
+            Contract.starts_on <= request.ends_on,
+            Contract.ends_on >= contract.starts_on,
+        ).limit(1))
+        if other is not None:
+            raise HTTPException(status_code=409, detail="Contract period overlaps another contract.")
+        previous = contract.ends_on
+        contract.ends_on = request.ends_on
+        db_session.add(ContractAdjustmentHistory(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            previous_ends_on=previous, new_ends_on=request.ends_on, reason=request.reason,
+        ))
+    else:
+        if contract.plan_snapshot.get("usage_type") != PlanUsageType.LIMITED.value:
+            raise HTTPException(status_code=409, detail="Unlimited contracts have no usage balance.")
+        period = db_session.execute(select(
+            UsageEntry.usage_period_starts_on, UsageEntry.usage_period_ends_on,
+        ).where(UsageEntry.contract_id == contract.id).order_by(
+            UsageEntry.usage_period_starts_on.desc()
+        ).limit(1)).one_or_none()
+        if period is None:
+            raise HTTPException(status_code=409, detail="Usage period is not initialized.")
+        available = db_session.scalar(select(func.coalesce(func.sum(UsageEntry.available_usage_delta), 0)).where(
+            UsageEntry.contract_id == contract.id,
+            UsageEntry.usage_period_starts_on == period[0],
+            UsageEntry.usage_period_ends_on == period[1],
+        ))
+        if available + request.usage_delta < 0:
+            raise HTTPException(status_code=409, detail="Usage balance cannot be negative.")
+        db_session.add(UsageEntry(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            entry_type=UsageEntryType.ADJUSTMENT,
+            available_usage_delta=request.usage_delta,
+            reserved_usage_delta=0, consumed_usage_delta=0,
+            usage_period_starts_on=period[0], usage_period_ends_on=period[1],
+            reason=request.reason,
+        ))
+        db_session.add(ContractAdjustmentHistory(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            usage_delta=request.usage_delta, reason=request.reason,
+        ))
+    db_session.commit()
+    return detailed_contract(contract, db_session)

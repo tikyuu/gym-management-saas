@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -33,6 +33,10 @@ class Reason(BaseModel):
 class TrainerChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
     staff_id: UUID
+
+
+class ReservationCorrection(Reason):
+    status: ReservationStatus
 
 
 def scoped_reservation(
@@ -297,4 +301,77 @@ def cancel_for_store(
         reason=request.reason,
     ))
     db_session.commit()
+    return {"id": reservation.id, "status": reservation.status}
+
+
+@router.post("/management/reservations/{reservation_id}/correct-status")
+def correct_reservation_status(
+    reservation_id: UUID,
+    request: ReservationCorrection,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    access = get_staff_access(current_user, db_session)
+    require_writable_organization(access)
+    reservation = scoped_reservation(reservation_id, access, db_session, manager_only=True)
+    if request.status == reservation.status:
+        raise HTTPException(status_code=409, detail="Reservation status is unchanged.")
+    if request.status == ReservationStatus.CONFIRMED:
+        if as_utc(reservation.starts_at) <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=409, detail="Past reservations cannot be reconfirmed.")
+        overlap = db_session.scalar(select(Reservation.id).where(
+            Reservation.id != reservation.id,
+            Reservation.status == ReservationStatus.CONFIRMED,
+            Reservation.starts_at < reservation.ends_at,
+            Reservation.ends_at > reservation.starts_at,
+            or_(Reservation.staff_id == reservation.staff_id,
+                Reservation.member_id == reservation.member_id),
+        ).limit(1))
+        if overlap is not None:
+            raise HTTPException(status_code=409, detail="Reservation slot is already occupied.")
+    contract = db_session.scalar(select(Contract).where(Contract.id == reservation.contract_id).with_for_update())
+    if contract is None:
+        raise HTTPException(status_code=409, detail="Contract is unavailable.")
+    if usage_type(contract) == PlanUsageType.LIMITED:
+        hold = db_session.scalar(select(UsageEntry).where(
+            UsageEntry.reservation_id == reservation.id,
+            UsageEntry.entry_type == UsageEntryType.HOLD,
+        ))
+        if hold is None:
+            raise HTTPException(status_code=409, detail="Reservation usage history is missing.")
+        current_available, current_reserved, current_consumed = db_session.execute(select(
+            func.coalesce(func.sum(UsageEntry.available_usage_delta), 0),
+            func.coalesce(func.sum(UsageEntry.reserved_usage_delta), 0),
+            func.coalesce(func.sum(UsageEntry.consumed_usage_delta), 0),
+        ).where(UsageEntry.reservation_id == reservation.id)).one()
+        target = {
+            ReservationStatus.CONFIRMED: (-1, 1, 0),
+            ReservationStatus.COMPLETED: (-1, 0, 1),
+            ReservationStatus.NO_SHOW: (-1, 0, 1),
+            ReservationStatus.CANCELLED: (0, 0, 0),
+        }[request.status]
+        deltas = (target[0] - current_available, target[1] - current_reserved,
+                  target[2] - current_consumed)
+        if deltas != (0, 0, 0):
+            db_session.add(UsageEntry(
+                contract_id=contract.id, reservation_id=reservation.id,
+                executed_by_account_id=access.account.id,
+                entry_type=UsageEntryType.ADJUSTMENT,
+                available_usage_delta=deltas[0], reserved_usage_delta=deltas[1],
+                consumed_usage_delta=deltas[2],
+                usage_period_starts_on=hold.usage_period_starts_on,
+                usage_period_ends_on=hold.usage_period_ends_on,
+                reason=request.reason,
+            ))
+    previous = reservation.status
+    reservation.status = request.status
+    db_session.add(ReservationStatusHistory(
+        reservation_id=reservation.id, executed_by_account_id=access.account.id,
+        previous_status=previous, new_status=request.status, reason=request.reason,
+    ))
+    try:
+        db_session.commit()
+    except IntegrityError as error:
+        db_session.rollback()
+        raise HTTPException(status_code=409, detail="Reservation status conflicts with another booking.") from error
     return {"id": reservation.id, "status": reservation.status}

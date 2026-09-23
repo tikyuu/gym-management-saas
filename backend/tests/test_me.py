@@ -9,6 +9,7 @@ from app.api.v1.me import get_me
 from app.auth.cognito import AuthenticatedUser
 from app.models.base import Base
 from app.models.member import Member
+from app.models.organization import SystemAdmin
 from app.models.staff import Staff
 from app.models.user_account import UserAccount, UserAccountStatus
 
@@ -16,7 +17,7 @@ from app.models.user_account import UserAccount, UserAccountStatus
 def test_get_me_finds_active_account_by_cognito_identity() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(
-        engine, tables=[UserAccount.__table__, Member.__table__, Staff.__table__]
+        engine, tables=[UserAccount.__table__, Member.__table__, Staff.__table__, SystemAdmin.__table__]
     )
     current_user = AuthenticatedUser(
         cognito_sub=str(uuid4()),

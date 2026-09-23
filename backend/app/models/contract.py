@@ -7,6 +7,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     Text,
     Uuid,
     func,
@@ -87,3 +88,16 @@ class ContractStatusHistory(Base):
         DateTime(timezone=True),
         server_default=func.now(),
     )
+
+
+class ContractAdjustmentHistory(Base):
+    __tablename__ = "contract_adjustment_histories"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    contract_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("contracts.id"))
+    executed_by_account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"))
+    previous_ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    new_ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    usage_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

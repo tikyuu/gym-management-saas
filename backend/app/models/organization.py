@@ -61,3 +61,35 @@ class OrganizationStatusHistory(Base):
         DateTime(timezone=True),
         server_default=func.now(),
     )
+
+
+class SystemAdmin(Base):
+    __tablename__ = "system_admins"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AdminVerification(Base):
+    __tablename__ = "admin_verifications"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("organizations.id"))
+    staff_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("staff.id"))
+    reference: Mapped[str] = mapped_column(String(128), unique=True)
+    verified_by_account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"))
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SystemAdminAudit(Base):
+    __tablename__ = "system_admin_audits"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"))
+    action: Mapped[str] = mapped_column(String(64))
+    target_id: Mapped[UUID] = mapped_column(Uuid)
+    reference: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
