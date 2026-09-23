@@ -26,10 +26,10 @@ from app.models.catalog import (
     StoreMenu,
     TrainerMenu,
 )
-from app.models.contract import Contract, ContractStatus, ContractStatusHistory
+from app.models.contract import Contract, ContractAdjustmentHistory, ContractStatus, ContractStatusHistory
 from app.models.member import Member, MemberStatus
 from app.models.organization import Organization, OrganizationStatus
-from app.models.reservation import Reservation, UsageEntry, UsageEntryType
+from app.models.reservation import Reservation, ReservationStatus, ReservationStatusHistory, UsageEntry, UsageEntryType
 from app.models.scheduling import UnavailablePeriod, WorkShift
 from app.models.staff import Staff, StaffRole, StaffRoleType, StaffStatus, StaffStoreMembership
 from app.models.store import Store, StoreRegularHour, StoreSpecialDay, StoreSpecialDayHour, StoreStatus
@@ -63,6 +63,7 @@ def contract_environment():
         PlanMenu.__table__,
         Contract.__table__,
         ContractStatusHistory.__table__,
+        ContractAdjustmentHistory.__table__,
         Staff.__table__,
         StaffStoreMembership.__table__,
         StaffRole.__table__,
@@ -70,6 +71,7 @@ def contract_environment():
         WorkShift.__table__,
         UnavailablePeriod.__table__,
         Reservation.__table__,
+        ReservationStatusHistory.__table__,
         UsageEntry.__table__,
     ]
     for table in tables:
@@ -274,6 +276,51 @@ def test_application_approval_and_booking_share_approved_grant(contract_environm
         assert len(session.scalars(select(UsageEntry)).all()) == 2
 
 
+def test_manager_adjusts_contract_usage_and_period_with_history(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    contract_id = applied.json()["id"]
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/approve", json={}).status_code == 200
+    path = f"/api/v1/management/contracts/{contract_id}/adjustments"
+    assert client.post(path, json={"reason": "補填", "usage_delta": -3}).status_code == 409
+    adjusted = client.post(path, json={"reason": "補填", "usage_delta": 1})
+    assert adjusted.status_code == 200, adjusted.text
+    assert adjusted.json()["usage"]["available_count"] == 3
+    extended = client.post(path, json={"reason": "延長", "ends_on": "2030-11-30"})
+    assert extended.status_code == 200, extended.text
+    assert extended.json()["ends_on"] == "2030-11-30"
+    with Session(engine) as session:
+        assert len(session.scalars(select(ContractAdjustmentHistory)).all()) == 2
+        assert len(session.scalars(select(UsageEntry)).all()) == 2
+
+
+def test_manager_corrects_reservation_and_reconciles_usage(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{applied.json()['id']}/approve", json={}).status_code == 200
+    identity["current"] = users["member"]
+    booking = client.post("/api/v1/reservations", json={
+        "store_id": str(identifiers["store_id"]),
+        "menu_id": str(identifiers["menu_id"]),
+        "starts_at": BOOKING_TIME.isoformat(),
+    })
+    assert booking.status_code == 201, booking.text
+    identity["current"] = users["admin"]
+    path = f"/api/v1/management/reservations/{booking.json()['id']}/correct-status"
+    cancelled = client.post(path, json={"status": "cancelled", "reason": "誤登録"})
+    assert cancelled.status_code == 200, cancelled.text
+    restored = client.post(path, json={"status": "confirmed", "reason": "誤取消"})
+    assert restored.status_code == 200, restored.text
+    with Session(engine) as session:
+        reservation = session.get(Reservation, UUID(booking.json()["id"]))
+        assert reservation.status == ReservationStatus.CONFIRMED
+        entries = session.scalars(select(UsageEntry).where(UsageEntry.reservation_id == reservation.id)).all()
+        assert sum(entry.available_usage_delta for entry in entries) == -1
+        assert sum(entry.reserved_usage_delta for entry in entries) == 1
+
+
 def test_rejection_records_reason_and_allows_new_application(contract_environment) -> None:
     client, engine, identifiers, identity, users = contract_environment
     applied = apply_for_plan(client, identifiers["plan_id"])
@@ -343,6 +390,146 @@ def test_unlimited_approval_has_no_usage_grant(contract_environment) -> None:
     assert approved.status_code == 200
     with Session(engine) as session:
         assert not session.scalars(select(UsageEntry)).all()
+
+
+def test_contract_lists_details_and_termination(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    assert applied.status_code == 201
+    contract_id = applied.json()["id"]
+    mine = client.get("/api/v1/members/me/contracts")
+    assert mine.status_code == 200
+    assert mine.json()["items"][0]["plan_name"] == "月2回"
+    assert mine.json()["items"][0]["usage"]["available_count"] == 0
+    identity["current"] = users["admin"]
+    listed = client.get("/api/v1/management/contracts")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["id"] == contract_id
+    assert client.get(f"/api/v1/management/contracts/{contract_id}").status_code == 200
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/terminate", json={"reason": "終了"}).status_code == 409
+    assert client.post(f"/api/v1/management/contracts/{contract_id}/approve", json={}).status_code == 200
+    terminated = client.post(f"/api/v1/management/contracts/{contract_id}/terminate", json={"reason": "終了"})
+    assert terminated.status_code == 200
+    assert terminated.json()["status"] == "terminated"
+    with Session(engine) as session:
+        history = session.scalars(select(ContractStatusHistory).where(ContractStatusHistory.contract_id == UUID(contract_id))).all()
+        assert len(history) == 2
+    identity["current"] = users["member"]
+    assert client.get("/api/v1/members/me/contracts?scope=history").json()["items"][0]["status"] == "terminated"
+
+
+def test_work_shift_and_unavailable_period_lifecycle(contract_environment) -> None:
+    client, _, identifiers, identity, users = contract_environment
+    identity["current"] = users["admin"]
+    shift_payload = {
+        "staff_id": str(identifiers["trainer_id"]),
+        "store_id": str(identifiers["store_id"]),
+        "starts_at": "2030-10-11T09:00:00+09:00",
+        "ends_at": "2030-10-11T18:00:00+09:00",
+    }
+    created = client.post("/api/v1/work-shifts", json=shift_payload)
+    assert created.status_code == 201
+    shift_id = created.json()["id"]
+    assert client.post("/api/v1/work-shifts", json=shift_payload).status_code == 409
+    assert len(client.get("/api/v1/work-shifts?from=2030-10-11&to=2030-10-11").json()["items"]) == 1
+    period = client.post(f"/api/v1/work-shifts/{shift_id}/unavailable-periods", json={
+        "starts_at": "2030-10-11T12:00:00+09:00",
+        "ends_at": "2030-10-11T13:00:00+09:00",
+        "reason": "break",
+    })
+    assert period.status_code == 201
+    assert client.delete(f"/api/v1/work-shifts/{shift_id}/unavailable-periods/{period.json()['id']}").status_code == 204
+    assert client.post(f"/api/v1/work-shifts/{shift_id}/cancel").status_code == 200
+    identity["current"] = users["trainer"]
+    assert len(client.get("/api/v1/staff/me/work-shifts?from=2030-10-11&to=2030-10-11").json()["items"]) == 1
+
+
+def test_staff_profiles_and_role_management(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    identity["current"] = users["admin"]
+    assert client.get("/api/v1/staff/me").status_code == 200
+    listed = client.get("/api/v1/staff")
+    assert listed.status_code == 200
+    assert len(listed.json()["items"]) == 2
+    trainer_id = identifiers["trainer_id"]
+    detail = client.get(f"/api/v1/staff/{trainer_id}")
+    assert detail.status_code == 200
+    assert detail.json()["stores"][0]["id"] == str(identifiers["store_id"])
+    granted = client.post(f"/api/v1/staff/{trainer_id}/organization-admin-role")
+    assert granted.status_code == 201
+    assert client.delete(f"/api/v1/staff/{trainer_id}/organization-admin-role").status_code == 200
+    assert client.delete(f"/api/v1/staff/{identifiers['admin_id']}/organization-admin-role").status_code == 409
+    with Session(engine) as session:
+        other_store = Store(
+            organization_id=session.get(Store, identifiers["store_id"]).organization_id,
+            name="新宿店", address="東京都", phone_number="0312345679",
+        )
+        session.add(other_store)
+        session.commit()
+        other_store_id = other_store.id
+    membership = client.post(f"/api/v1/staff/{trainer_id}/store-memberships", json={
+        "store_id": str(other_store_id), "roles": ["trainer"],
+    })
+    assert membership.status_code == 201
+    membership_id = membership.json()["id"]
+    assert client.post(f"/api/v1/staff/{trainer_id}/store-memberships/{membership_id}/deactivate").status_code == 200
+    identity["current"] = users["trainer"]
+    assert client.get("/api/v1/staff").status_code == 403
+
+
+def test_staff_reservation_scope_and_store_cancellation(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{applied.json()['id']}/approve", json={}).status_code == 200
+    identity["current"] = users["member"]
+    booking = client.post("/api/v1/reservations", json={
+        "store_id": str(identifiers["store_id"]),
+        "menu_id": str(identifiers["menu_id"]),
+        "starts_at": BOOKING_TIME.isoformat(),
+    })
+    assert booking.status_code == 201
+    reservation_id = booking.json()["id"]
+    identity["current"] = users["trainer"]
+    listed = client.get("/api/v1/staff/me/reservations?from=2030-10-10&to=2030-10-10")
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["member"]["id"] == str(identifiers["member_id"])
+    assert client.get(f"/api/v1/staff/me/reservations/{reservation_id}").status_code == 200
+    assert client.post(f"/api/v1/staff/me/reservations/{reservation_id}/complete").status_code == 409
+    cancelled = client.post(f"/api/v1/staff/me/reservations/{reservation_id}/cancel", json={"reason": "店舗都合"})
+    assert cancelled.status_code == 200
+    with Session(engine) as session:
+        entries = session.scalars(select(UsageEntry).where(UsageEntry.reservation_id == UUID(reservation_id))).all()
+        assert {entry.entry_type for entry in entries} == {UsageEntryType.HOLD, UsageEntryType.RELEASE}
+    identity["current"] = users["other_admin"]
+    assert client.get(f"/api/v1/staff/me/reservations/{reservation_id}").status_code == 404
+
+
+def test_staff_completion_consumes_reserved_usage(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    applied = apply_for_plan(client, identifiers["plan_id"])
+    identity["current"] = users["admin"]
+    assert client.post(f"/api/v1/management/contracts/{applied.json()['id']}/approve", json={}).status_code == 200
+    identity["current"] = users["member"]
+    booking = client.post("/api/v1/reservations", json={
+        "store_id": str(identifiers["store_id"]),
+        "menu_id": str(identifiers["menu_id"]),
+        "starts_at": BOOKING_TIME.isoformat(),
+    })
+    assert booking.status_code == 201
+    reservation_id = UUID(booking.json()["id"])
+    with Session(engine) as session:
+        reservation = session.get(Reservation, reservation_id)
+        reservation.starts_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        reservation.ends_at = datetime(2020, 1, 1, 1, tzinfo=timezone.utc)
+        session.commit()
+    identity["current"] = users["trainer"]
+    completed = client.post(f"/api/v1/staff/me/reservations/{reservation_id}/complete")
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "completed"
+    with Session(engine) as session:
+        entries = session.scalars(select(UsageEntry).where(UsageEntry.reservation_id == reservation_id)).all()
+        assert {entry.entry_type for entry in entries} == {UsageEntryType.HOLD, UsageEntryType.CONSUME}
 
 
 def test_application_rejects_inactive_plan_or_member(contract_environment) -> None:

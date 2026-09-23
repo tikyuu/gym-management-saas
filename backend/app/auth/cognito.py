@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Annotated
 
@@ -14,6 +15,7 @@ from app.settings import Settings
 class AuthenticatedUser:
     cognito_sub: str
     user_pool_id: str
+    authenticated_at: datetime | None = None
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -69,6 +71,8 @@ def get_current_user(
     return AuthenticatedUser(
         cognito_sub=claims["sub"],
         user_pool_id=user_pool_id,
+        authenticated_at=datetime.fromtimestamp(claims["auth_time"], timezone.utc)
+        if isinstance(claims.get("auth_time"), int) else None,
     )
 
 

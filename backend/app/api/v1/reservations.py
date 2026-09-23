@@ -135,6 +135,14 @@ def usage_type(contract: Contract) -> PlanUsageType:
 def available_usage_period(
     db_session: Session, contract_id: UUID, booking_date: date
 ) -> tuple[date, date] | None:
+    contract = db_session.get(Contract, contract_id)
+    if contract is not None and contract.plan_snapshot.get("period_type") == "fixed":
+        available = db_session.scalar(select(func.coalesce(func.sum(UsageEntry.available_usage_delta), 0)).where(
+            UsageEntry.contract_id == contract_id,
+        ))
+        if available > 0 and contract.starts_on <= booking_date <= contract.ends_on:
+            return contract.starts_on, contract.ends_on
+        return None
     entries = db_session.execute(
         select(
             UsageEntry.usage_period_starts_on,

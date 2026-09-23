@@ -4,14 +4,28 @@ from app.api.v1.booking_catalog import router as booking_catalog_router
 from app.api.v1.contracts import router as contracts_router
 from app.api.v1.availability import router as availability_router
 from app.api.v1.me import router as me_router
+from app.api.v1.management_stores import router as management_stores_router
+from app.api.v1.management_catalog import router as management_catalog_router
+from app.api.v1.work_shifts import router as work_shifts_router
+from app.api.v1.staff_management import router as staff_management_router
+from app.api.v1.staff_reservations import router as staff_reservations_router
+from app.api.v1.system_admin import router as system_admin_router
 from app.api.v1.members import router as members_router
+from app.api.v1.member_lifecycle import router as member_lifecycle_router
 from app.api.v1.reservations import router as reservations_router
 
 
 router = APIRouter()
 router.include_router(me_router)
 router.include_router(members_router)
+router.include_router(member_lifecycle_router)
 router.include_router(booking_catalog_router)
 router.include_router(availability_router)
 router.include_router(reservations_router)
 router.include_router(contracts_router)
+router.include_router(management_stores_router)
+router.include_router(management_catalog_router)
+router.include_router(work_shifts_router)
+router.include_router(staff_management_router)
+router.include_router(staff_reservations_router)
+router.include_router(system_admin_router)

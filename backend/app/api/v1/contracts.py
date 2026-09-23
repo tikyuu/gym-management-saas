@@ -1,12 +1,12 @@
 import calendar
-from datetime import date, datetime, timedelta
-from typing import Annotated
+from datetime import date, datetime, timedelta, timezone
+from typing import Annotated, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,10 +25,10 @@ from app.models.catalog import (
     PlanUsageType,
     StoreMenu,
 )
-from app.models.contract import Contract, ContractStatus, ContractStatusHistory
+from app.models.contract import Contract, ContractAdjustmentHistory, ContractStatus, ContractStatusHistory
 from app.models.member import Member, MemberStatus
 from app.models.organization import Organization, OrganizationStatus
-from app.models.reservation import UsageEntry, UsageEntryType
+from app.models.reservation import Reservation, ReservationStatus, UsageEntry, UsageEntryType
 from app.models.staff import (
     Staff,
     StaffRole,
@@ -78,6 +78,56 @@ class ContractRejection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     reason: str = Field(min_length=1, max_length=1000)
+
+
+class ContractReason(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class ContractAdjustment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=1, max_length=1000)
+    ends_on: date | None = None
+    usage_delta: int | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_adjustment(self):
+        if (self.ends_on is None) == (self.usage_delta is None):
+            raise ValueError("Specify either ends_on or usage_delta.")
+        if self.usage_delta == 0:
+            raise ValueError("usage_delta must not be zero.")
+        return self
+
+
+def contract_usage(contract: Contract, db_session: Session) -> dict:
+    if contract.plan_snapshot.get("usage_type") == PlanUsageType.UNLIMITED.value:
+        return {"type": "unlimited"}
+    available, reserved = db_session.execute(
+        select(
+            func.coalesce(func.sum(UsageEntry.available_usage_delta), 0),
+            func.coalesce(func.sum(UsageEntry.reserved_usage_delta), 0),
+        ).where(UsageEntry.contract_id == contract.id)
+    ).one()
+    return {
+        "type": "count_based",
+        "available_count": available,
+        "reserved_count": reserved,
+    }
+
+
+def detailed_contract(contract: Contract, db_session: Session) -> dict:
+    return {
+        "id": contract.id,
+        "status": contract.status,
+        "plan_name": contract.plan_snapshot["name"],
+        "price_yen": contract.plan_snapshot.get("price_yen"),
+        "starts_on": contract.starts_on,
+        "ends_on": contract.ends_on,
+        "usage": contract_usage(contract, db_session),
+        "plan_snapshot": contract.plan_snapshot,
+    }
 
 
 def today_in_japan() -> date:
@@ -336,3 +386,234 @@ def reject_contract(
     )
     db_session.commit()
     return contract_response(contract)
+
+
+@router.get("/members/me/contracts")
+def list_my_contracts(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+    scope: Literal["current", "history"] = "current",
+) -> dict:
+    member, _ = get_member_profile(current_user, db_session)
+    statuses = (
+        ACTIVE_CONTRACT_STATUSES
+        if scope == "current"
+        else (ContractStatus.TERMINATED, ContractStatus.EXPIRED, ContractStatus.REJECTED)
+    )
+    contracts = db_session.scalars(
+        select(Contract)
+        .where(Contract.member_id == member.id, Contract.status.in_(statuses))
+        .order_by(Contract.starts_on.desc(), Contract.id.desc())
+    ).all()
+    return {"items": [detailed_contract(contract, db_session) for contract in contracts]}
+
+
+@router.get("/management/contracts")
+def list_management_contracts(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+    store_id: UUID | None = None,
+    member_id: UUID | None = None,
+    status: ContractStatus | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: UUID | None = None,
+) -> dict:
+    from app.api.v1.authorization import get_staff_access
+
+    access = get_staff_access(current_user, db_session)
+    allowed_stores = access.managed_store_ids
+    if not access.organization_admin and not allowed_stores:
+        raise HTTPException(status_code=403, detail="Manager role required.")
+    if store_id is not None and not access.organization_admin and store_id not in allowed_stores:
+        raise HTTPException(status_code=404, detail="Store not found.")
+    query = select(Contract).join(Member, Member.id == Contract.member_id).where(
+        Member.organization_id == access.staff.organization_id
+    )
+    if member_id is not None:
+        query = query.where(Contract.member_id == member_id)
+    if status is not None:
+        query = query.where(Contract.status == status)
+    if cursor is not None:
+        query = query.where(Contract.id > cursor)
+    contracts = db_session.scalars(query.order_by(Contract.id)).all()
+    visible = []
+    for contract in contracts:
+        plan_stores = set(contract.plan_snapshot.get("store_ids", []))
+        if store_id is not None and str(store_id) not in plan_stores:
+            continue
+        if not access.organization_admin and not plan_stores.intersection(str(store) for store in allowed_stores):
+            continue
+        visible.append(detailed_contract(contract, db_session))
+        if len(visible) > limit:
+            break
+    return {
+        "items": visible[:limit],
+        "next_cursor": visible[limit - 1]["id"] if len(visible) > limit else None,
+    }
+
+
+@router.get("/management/contracts/{contract_id}")
+def get_management_contract(
+    contract_id: UUID,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    contract, _ = management_contract(contract_id, current_user, db_session)
+    history = db_session.scalars(
+        select(ContractStatusHistory)
+        .where(ContractStatusHistory.contract_id == contract.id)
+        .order_by(ContractStatusHistory.created_at, ContractStatusHistory.id)
+    ).all()
+    return {
+        **detailed_contract(contract, db_session),
+        "history": [
+            {
+                "previous_status": event.previous_status,
+                "new_status": event.new_status,
+                "reason": event.reason,
+                "created_at": event.created_at,
+            }
+            for event in history
+        ],
+    }
+
+
+def change_contract_status(
+    contract_id: UUID,
+    reason: str,
+    new_status: ContractStatus,
+    allowed_previous: set[ContractStatus],
+    current_user: AuthenticatedUser,
+    db_session: Session,
+) -> ContractResponse:
+    contract, staff = management_contract(contract_id, current_user, db_session)
+    if contract.status not in allowed_previous:
+        raise HTTPException(status_code=409, detail="Invalid contract status transition.")
+    if new_status in (ContractStatus.PAUSED, ContractStatus.TERMINATED):
+        future_reservation = db_session.scalar(
+            select(Reservation.id).where(
+                Reservation.contract_id == contract.id,
+                Reservation.status == ReservationStatus.CONFIRMED,
+                Reservation.starts_at > datetime.now(timezone.utc),
+            ).limit(1)
+        )
+        if future_reservation is not None:
+            raise HTTPException(status_code=409, detail="Future reservations must be resolved first.")
+    if new_status == ContractStatus.ACTIVE:
+        if not contract.starts_on <= today_in_japan() <= contract.ends_on:
+            raise HTTPException(status_code=409, detail="Contract period is not active.")
+        store_ids = [UUID(store_id) for store_id in contract.plan_snapshot.get("store_ids", [])]
+        active_store = db_session.scalar(select(Store.id).where(
+            Store.id.in_(store_ids), Store.status == StoreStatus.ACTIVE
+        ).limit(1))
+        if active_store is None:
+            raise HTTPException(status_code=409, detail="No active store remains for this contract.")
+    previous = contract.status
+    contract.status = new_status
+    db_session.add(ContractStatusHistory(
+        contract_id=contract.id,
+        executed_by_account_id=staff.account_id,
+        previous_status=previous,
+        new_status=new_status,
+        reason=reason,
+    ))
+    db_session.commit()
+    return contract_response(contract)
+
+
+@router.post("/management/contracts/{contract_id}/pause", response_model=ContractResponse)
+def pause_contract(
+    contract_id: UUID,
+    request: ContractReason,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> ContractResponse:
+    return change_contract_status(contract_id, request.reason, ContractStatus.PAUSED, {ContractStatus.ACTIVE}, current_user, db_session)
+
+
+@router.post("/management/contracts/{contract_id}/resume", response_model=ContractResponse)
+def resume_contract(
+    contract_id: UUID,
+    request: ContractReason,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> ContractResponse:
+    return change_contract_status(contract_id, request.reason, ContractStatus.ACTIVE, {ContractStatus.PAUSED}, current_user, db_session)
+
+
+@router.post("/management/contracts/{contract_id}/terminate", response_model=ContractResponse)
+def terminate_contract(
+    contract_id: UUID,
+    request: ContractReason,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> ContractResponse:
+    return change_contract_status(contract_id, request.reason, ContractStatus.TERMINATED, {ContractStatus.SCHEDULED, ContractStatus.ACTIVE, ContractStatus.PAUSED}, current_user, db_session)
+
+
+@router.post("/management/contracts/{contract_id}/adjustments")
+def adjust_contract(
+    contract_id: UUID,
+    request: ContractAdjustment,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> dict:
+    contract, staff = management_contract(contract_id, current_user, db_session)
+    if contract.status not in (ContractStatus.SCHEDULED, ContractStatus.ACTIVE, ContractStatus.PAUSED):
+        raise HTTPException(status_code=409, detail="Contract cannot be adjusted.")
+    if request.ends_on is not None:
+        if request.ends_on < contract.starts_on:
+            raise HTTPException(status_code=422, detail="ends_on is before starts_on.")
+        confirmed_reservations = db_session.scalars(select(Reservation).where(
+            Reservation.contract_id == contract.id,
+            Reservation.status == ReservationStatus.CONFIRMED,
+        )).all()
+        if any(reservation.starts_at.astimezone(JAPAN_TIMEZONE).date() > request.ends_on
+               for reservation in confirmed_reservations):
+            raise HTTPException(status_code=409, detail="Confirmed reservations fall outside the new period.")
+        other = db_session.scalar(select(Contract.id).where(
+            Contract.id != contract.id,
+            Contract.member_id == contract.member_id,
+            Contract.status.in_(ACTIVE_CONTRACT_STATUSES),
+            Contract.starts_on <= request.ends_on,
+            Contract.ends_on >= contract.starts_on,
+        ).limit(1))
+        if other is not None:
+            raise HTTPException(status_code=409, detail="Contract period overlaps another contract.")
+        previous = contract.ends_on
+        contract.ends_on = request.ends_on
+        db_session.add(ContractAdjustmentHistory(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            previous_ends_on=previous, new_ends_on=request.ends_on, reason=request.reason,
+        ))
+    else:
+        if contract.plan_snapshot.get("usage_type") != PlanUsageType.LIMITED.value:
+            raise HTTPException(status_code=409, detail="Unlimited contracts have no usage balance.")
+        period = db_session.execute(select(
+            UsageEntry.usage_period_starts_on, UsageEntry.usage_period_ends_on,
+        ).where(UsageEntry.contract_id == contract.id).order_by(
+            UsageEntry.usage_period_starts_on.desc()
+        ).limit(1)).one_or_none()
+        if period is None:
+            raise HTTPException(status_code=409, detail="Usage period is not initialized.")
+        available = db_session.scalar(select(func.coalesce(func.sum(UsageEntry.available_usage_delta), 0)).where(
+            UsageEntry.contract_id == contract.id,
+            UsageEntry.usage_period_starts_on == period[0],
+            UsageEntry.usage_period_ends_on == period[1],
+        ))
+        if available + request.usage_delta < 0:
+            raise HTTPException(status_code=409, detail="Usage balance cannot be negative.")
+        db_session.add(UsageEntry(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            entry_type=UsageEntryType.ADJUSTMENT,
+            available_usage_delta=request.usage_delta,
+            reserved_usage_delta=0, consumed_usage_delta=0,
+            usage_period_starts_on=period[0], usage_period_ends_on=period[1],
+            reason=request.reason,
+        ))
+        db_session.add(ContractAdjustmentHistory(
+            contract_id=contract.id, executed_by_account_id=staff.account_id,
+            usage_delta=request.usage_delta, reason=request.reason,
+        ))
+    db_session.commit()
+    return detailed_contract(contract, db_session)

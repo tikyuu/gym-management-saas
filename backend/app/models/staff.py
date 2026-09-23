@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -71,6 +72,18 @@ class Staff(Base):
     )
 
 
+class StaffStatusHistory(Base):
+    __tablename__ = "staff_status_histories"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    staff_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("staff.id"))
+    executed_by_account_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("user_accounts.id"))
+    previous_status: Mapped[StaffStatus] = mapped_column(value_enum(StaffStatus, name="staff_status"))
+    new_status: Mapped[StaffStatus] = mapped_column(value_enum(StaffStatus, name="staff_status"))
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class StaffStoreMembership(Base):
     __tablename__ = "staff_store_memberships"
     __table_args__ = (
@@ -85,6 +98,7 @@ class StaffStoreMembership(Base):
             "store_id",
             unique=True,
             postgresql_where=text("status = 'active'"),
+            sqlite_where=text("status = 'active'"),
         ),
         UniqueConstraint(
             "id",
@@ -141,6 +155,9 @@ class StaffRole(Base):
             postgresql_where=text(
                 "status = 'active' AND role = 'organization_admin'"
             ),
+            sqlite_where=text(
+                "status = 'active' AND role = 'organization_admin'"
+            ),
         ),
         Index(
             "uq_staff_roles_active_store_role",
@@ -149,6 +166,9 @@ class StaffRole(Base):
             "role",
             unique=True,
             postgresql_where=text(
+                "status = 'active' AND role IN ('store_admin', 'trainer')"
+            ),
+            sqlite_where=text(
                 "status = 'active' AND role IN ('store_admin', 'trainer')"
             ),
         ),
