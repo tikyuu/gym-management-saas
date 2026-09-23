@@ -21,6 +21,8 @@
 | `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff` | 管理者が権限範囲内のスタッフ一覧を取得する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff` | 事業者管理者がスタッフを招待する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/me/activate` | 招待されたスタッフが初回ログイン後に利用を開始する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | スタッフが権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/work-shifts` | スタッフ自身の勤務予定を取得する | Cognitoアクセストークン |
@@ -243,6 +245,95 @@ SaaS運営管理者の場合:
 | `403 Forbidden` | 店舗管理者・事業者管理者ではない、または有効な役割・店舗所属がない |
 | `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
 | `422 Unprocessable Content` | `status`の値が不正 |
+
+## スタッフの招待
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff` | ログイン中の事業者管理者が、同一事業者のスタッフを招待する | Cognitoアクセストークン |
+
+事業者管理者だけが呼び出せる。店舗管理者とトレーナーは呼び出せない。新しいスタッフは、招待時点では`invited`とする。
+
+### リクエスト
+
+```json
+{
+  "name": "佐藤 花子",
+  "email": "sato@example.com",
+  "roles": [
+    {
+      "role": "trainer",
+      "store_id": "store_001"
+    }
+  ]
+}
+```
+
+`roles`には1件以上を指定する。`trainer`と`store_admin`では`store_id`が必須、`organization_admin`では`store_id`を指定しない。同じスタッフへ複数の店舗・役割を指定できる。FastAPIは店舗に紐づく役割から店舗所属を作成し、同じ店舗に複数の役割を指定した場合でも店舗所属は1件だけ作成する。
+
+### 処理内容
+
+FastAPIはCognitoのスタッフ用User Poolへ招待ユーザーを作成し、Cognitoが指定メールアドレスへ初回ログイン用の招待メールを送る。Cognitoが発行した`sub`を使って`user_accounts`、`staff`、店舗所属および役割を登録する。
+
+Cognitoのユーザー作成後にデータベース登録が失敗した場合は、作成したCognitoユーザーを削除する補償処理を行う。補償処理にも失敗した場合はエラーログ・アラームの対象とし、運用で確認して解消する。
+
+### 成功時のレスポンス
+
+HTTPステータス`201 Created`で、招待したスタッフを返す。
+
+```json
+{
+  "id": "staff_001",
+  "name": "佐藤 花子",
+  "status": "invited",
+  "roles": [
+    {
+      "role": "trainer",
+      "store_id": "store_001"
+    }
+  ]
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定した店舗が存在しない、または同一事業者に属さない |
+| `409 Conflict` | 同じメールアドレスのスタッフ用Cognitoユーザー、または有効な招待が存在する |
+| `422 Unprocessable Content` | 氏名・メールアドレス・役割の形式が不正、または役割と`store_id`の組み合わせが不正 |
+| `503 Service Unavailable` | Cognitoへの招待ユーザー作成またはメール送信に失敗した |
+
+## 招待済みスタッフの利用開始
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/me/activate` | 初回ログインを完了した招待済みスタッフが、自身の利用を開始する | Cognitoアクセストークン |
+
+Cognitoの招待メールから初回ログインとパスワード設定を完了した直後に、Reactが1回だけ呼び出す。リクエスト本文は受け取らない。アクセストークン内のUser Pool IDと`sub`から、対象スタッフを特定する。
+
+対象スタッフの状態が`invited`であることを確認し、`active`へ変更する。すでに`active`のスタッフが再実行しても、状態は変更せず成功として扱う。これにより、通信失敗後にReactが再送しても安全に処理できる。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、利用開始後の状態を返す。
+
+```json
+{
+  "id": "staff_001",
+  "status": "active"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | スタッフアカウントが`inactive`である |
+| `404 Not Found` | アクセストークンに対応するスタッフプロフィールが存在しない |
 
 ## SaaS運営管理者プロフィール
 
