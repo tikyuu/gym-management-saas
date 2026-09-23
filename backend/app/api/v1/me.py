@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.cognito import AuthenticatedUser, get_current_user
 from app.database import get_db_session
+from app.models.member import Member
 from app.models.user_account import UserAccount, UserAccountStatus
 
 
@@ -18,11 +19,15 @@ class CurrentUserResponse(BaseModel):
     user_pool_id: str
 
 
-@router.get("/me", response_model=CurrentUserResponse)
-def get_me(
-    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
-    db_session: Annotated[Session, Depends(get_db_session)],
-) -> CurrentUserResponse:
+class MemberCurrentUserResponse(BaseModel):
+    user_type: Literal["member"] = "member"
+    display_name: str
+
+
+def get_active_account(
+    current_user: AuthenticatedUser,
+    db_session: Session,
+) -> UserAccount:
     account = db_session.scalar(
         select(UserAccount).where(
             UserAccount.user_pool_id == current_user.user_pool_id,
@@ -34,6 +39,19 @@ def get_me(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Application account is unavailable.",
         )
+
+    return account
+
+
+@router.get("/me", response_model=CurrentUserResponse | MemberCurrentUserResponse)
+def get_me(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db_session: Annotated[Session, Depends(get_db_session)],
+) -> CurrentUserResponse | MemberCurrentUserResponse:
+    account = get_active_account(current_user, db_session)
+    member = db_session.scalar(select(Member).where(Member.account_id == account.id))
+    if member is not None:
+        return MemberCurrentUserResponse(display_name=member.name)
 
     return CurrentUserResponse(
         cognito_sub=current_user.cognito_sub,
