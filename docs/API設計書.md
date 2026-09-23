@@ -23,8 +23,11 @@
 | `GET` | `/api/v1/staff` | 管理者が権限範囲内のスタッフ一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/{staff_id}` | 管理者が権限範囲内のスタッフ詳細を取得する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff` | 事業者管理者がスタッフを招待する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/{staff_id}/deactivate` | 事業者管理者がスタッフを利用停止にする | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/{staff_id}/organization-admin-role` | 事業者管理者が事業者管理者役割を付与する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/{staff_id}/store-memberships` | 事業者管理者がスタッフを店舗へ所属させる | Cognitoアクセストークン |
 | `PATCH` | `/api/v1/staff/{staff_id}/store-memberships/{membership_id}/roles` | 事業者管理者が店舗内役割を変更する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/{staff_id}/store-memberships/{membership_id}/deactivate` | 事業者管理者が店舗所属を終了する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/activate` | 招待されたスタッフが初回ログイン後に利用を開始する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | スタッフが権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
@@ -36,6 +39,7 @@
 | `POST` | `/api/v1/work-shifts/{shift_id}/unavailable-periods` | スタッフが勤務予定内の予約不可時間を登録する | Cognitoアクセストークン |
 | `PATCH` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | スタッフが予約不可時間を変更する | Cognitoアクセストークン |
 | `DELETE` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | スタッフが予約不可時間を削除する | Cognitoアクセストークン |
+| `POST` | `/api/v1/reservations/{reservation_id}/reassign-trainer` | 管理者が予約の担当トレーナーを変更する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/complete` | スタッフが予約を来店完了にする | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/no-show` | スタッフが予約を無断欠席にする | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me` | スタッフ自身のプロフィールと操作範囲を取得する | Cognitoアクセストークン |
@@ -368,6 +372,146 @@ HTTPステータス`200 OK`で、変更後に有効な役割を返す。
 | `404 Not Found` | 指定したスタッフまたは店舗所属が存在しない、または一致しない |
 | `409 Conflict` | 対象スタッフまたは店舗所属が`inactive` |
 | `422 Unprocessable Content` | `roles`が空、重複、または指定できない役割を含む |
+
+## スタッフの店舗所属終了
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/{staff_id}/store-memberships/{membership_id}/deactivate` | ログイン中の事業者管理者が、スタッフの店舗所属を終了する | Cognitoアクセストークン |
+
+異動や特定店舗からの退職時に呼び出す。スタッフ全体のログインは維持し、対象店舗への所属だけを終了する。事業者管理者だけが実行できる。
+
+対象店舗所属に紐づく将来の`scheduled`勤務予定を取消し、対象店舗で担当する将来の`confirmed`予約を別トレーナーへ変更またはキャンセルしてから実行する。未対応の勤務予定または予約が残る場合、FastAPIは所属終了を実行しない。
+
+所属状態を`inactive`へ変更して`ended_at`を記録する。同じ店舗所属に紐づく有効な`trainer`・`store_admin`役割も`inactive`へ変更して`revoked_at`を記録する。所属・役割の過去履歴は物理削除しない。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、終了後の所属状態を返す。すでに`inactive`の所属へ再実行しても、状態は変更せず成功として扱う。
+
+```json
+{
+  "id": "staff_store_membership_001",
+  "status": "inactive",
+  "ended_at": "2026-10-01T12:00:00+09:00"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定したスタッフまたは店舗所属が存在しない、または一致しない |
+| `409 Conflict` | 将来の勤務予定または`confirmed`予約が残っている |
+
+## 事業者管理者役割の付与
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/{staff_id}/organization-admin-role` | ログイン中の事業者管理者が、同一事業者のスタッフへ事業者管理者役割を付与する | Cognitoアクセストークン |
+
+事業者管理者だけが呼び出せる。対象スタッフは同一事業者に所属する`invited`または`active`のスタッフに限定する。店舗管理者とトレーナーは呼び出せない。リクエスト本文は受け取らない。
+
+`organization_admin`は店舗に紐づかない役割であるため、店舗所属を作成・変更しない。すでに有効な`organization_admin`を持つスタッフへ再実行しても、状態は変更せず成功として扱う。
+
+### 成功時のレスポンス
+
+HTTPステータス`201 Created`で、付与した役割を返す。すでに有効な役割を持つ場合は`200 OK`で同じ内容を返す。
+
+```json
+{
+  "staff_id": "staff_001",
+  "role": "organization_admin",
+  "status": "active"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定したスタッフが存在しない、または同一事業者に属さない |
+| `409 Conflict` | 対象スタッフが`inactive` |
+
+## スタッフの利用停止
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/{staff_id}/deactivate` | ログイン中の事業者管理者が、スタッフを利用停止にする | Cognitoアクセストークン |
+
+退職や利用停止時に呼び出す。事業者管理者だけが実行できる。リクエスト本文は受け取らない。対象スタッフを物理削除せず、`inactive`へ変更して過去の勤務・予約・操作履歴を保持する。
+
+利用停止前に、対象スタッフの将来の`scheduled`勤務予定を取消し、将来の`confirmed`予約を別スタッフへ変更またはキャンセルする。これらが残る場合、FastAPIは利用停止を実行しない。事業者内に`active`な`organization_admin`を最低1人残す。
+
+条件を満たす場合、FastAPIはCognitoのスタッフ用User Poolで対象ユーザーを無効化し、`staff.status`を`inactive`へ変更する。Cognito側の無効化に失敗した場合は、データベースの状態を変更しない。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、利用停止後の状態を返す。すでに`inactive`のスタッフへ再実行しても、状態は変更せず成功として扱う。
+
+```json
+{
+  "id": "staff_001",
+  "status": "inactive"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定したスタッフが存在しない、または同一事業者に属さない |
+| `409 Conflict` | 将来の勤務予定または`confirmed`予約が残っている、または最後の有効な事業者管理者である |
+| `503 Service Unavailable` | Cognitoのユーザー無効化に失敗した |
+
+## 予約担当トレーナーの変更
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/reservations/{reservation_id}/reassign-trainer` | ログイン中の管理者が、将来の予約の担当トレーナーを変更する | Cognitoアクセストークン |
+
+スタッフの退職や勤務予定変更などにより、将来の予約を別トレーナーへ引き継ぐときに呼び出す。店舗管理者は担当店舗、事業者管理者は事業者内の予約を変更できる。トレーナーは呼び出せない。
+
+### リクエスト
+
+```json
+{
+  "staff_id": "staff_002"
+}
+```
+
+予約の店舗・メニュー・開始終了時刻は変更せず、担当トレーナーだけを変更する。対象は開始時刻より前の`confirmed`予約だけとする。
+
+FastAPIは、新しい担当者が予約店舗へ有効所属し、対象メニューを担当可能であり、予約時間を完全に含む勤務予定を持つことを確認する。さらに、予約不可時間および他の`confirmed`予約と重ならないことを、トランザクション内で再確認する。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、変更後の担当トレーナーを返す。
+
+```json
+{
+  "id": "reservation_001",
+  "trainer": {
+    "id": "staff_002",
+    "name": "鈴木 一郎"
+  }
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 店舗管理者・事業者管理者ではない、または対象予約が権限範囲外 |
+| `404 Not Found` | 指定した予約または新しい担当スタッフが存在しない、または利用対象外 |
+| `409 Conflict` | 予約が`confirmed`ではない、開始時刻以降、または新しい担当者の勤務予定・予約不可時間・既存予約と重複する |
 
 ## スタッフの招待
 
