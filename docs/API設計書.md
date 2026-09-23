@@ -21,7 +21,10 @@
 | `POST` | `/api/v1/reservations/{reservation_id}/cancel` | 会員自身の予約をキャンセルする | Cognitoアクセストークン |
 | `GET` | `/api/v1/members/me/contracts` | 会員自身の契約内容と利用状況を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff` | 管理者が権限範囲内のスタッフ一覧を取得する | Cognitoアクセストークン |
+| `GET` | `/api/v1/staff/{staff_id}` | 管理者が権限範囲内のスタッフ詳細を取得する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff` | 事業者管理者がスタッフを招待する | Cognitoアクセストークン |
+| `POST` | `/api/v1/staff/{staff_id}/store-memberships` | 事業者管理者がスタッフを店舗へ所属させる | Cognitoアクセストークン |
+| `PATCH` | `/api/v1/staff/{staff_id}/store-memberships/{membership_id}/roles` | 事業者管理者が店舗内役割を変更する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/activate` | 招待されたスタッフが初回ログイン後に利用を開始する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations` | スタッフが権限範囲内の予約一覧を取得する | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me/reservations/{reservation_id}` | スタッフが権限範囲内の予約詳細を取得する | Cognitoアクセストークン |
@@ -245,6 +248,126 @@ SaaS運営管理者の場合:
 | `403 Forbidden` | 店舗管理者・事業者管理者ではない、または有効な役割・店舗所属がない |
 | `404 Not Found` | 指定した店舗が存在しない、または担当範囲外 |
 | `422 Unprocessable Content` | `status`の値が不正 |
+
+## 管理者向けスタッフ詳細の取得
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/staff/{staff_id}` | ログイン中の管理者が、権限範囲内のスタッフ詳細を取得する | Cognitoアクセストークン |
+
+スタッフ一覧から1人を選択したときに呼び出す。事業者管理者は事業者内のスタッフの全所属・役割を取得できる。店舗管理者は担当店舗に所属するスタッフだけを取得でき、返す所属・役割も担当店舗分に限定する。トレーナーは呼び出せない。
+
+```json
+{
+  "id": "staff_001",
+  "name": "佐藤 花子",
+  "status": "active",
+  "stores": [
+    {
+      "id": "store_001",
+      "name": "渋谷店",
+      "membership_status": "active",
+      "roles": ["trainer"]
+    }
+  ]
+}
+```
+
+スタッフのメールアドレス、電話番号、Cognitoの識別子および他店舗の情報は返さない。`invited`、`active`および`inactive`のスタッフを取得できる。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 店舗管理者・事業者管理者ではない、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定したスタッフが存在しない、または担当範囲外 |
+
+## スタッフの店舗所属追加
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/staff/{staff_id}/store-memberships` | ログイン中の事業者管理者が、スタッフを店舗へ所属させて店舗内役割を付与する | Cognitoアクセストークン |
+
+事業者管理者だけが呼び出せる。`invited`または`active`のスタッフを、同一事業者の店舗へ追加所属させる。店舗管理者とトレーナーは呼び出せない。
+
+### リクエスト
+
+```json
+{
+  "store_id": "store_002",
+  "roles": ["trainer"]
+}
+```
+
+`roles`には`trainer`または`store_admin`を1件以上指定する。`organization_admin`は店舗に紐づかないため、このAPIでは指定できない。FastAPIは店舗所属と役割付与を同じトランザクションで作成する。
+
+### 成功時のレスポンス
+
+HTTPステータス`201 Created`で、追加した店舗所属を返す。
+
+```json
+{
+  "id": "staff_store_membership_002",
+  "store": {
+    "id": "store_002",
+    "name": "新宿店"
+  },
+  "status": "active",
+  "roles": ["trainer"]
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定したスタッフまたは店舗が存在しない、または同一事業者に属さない |
+| `409 Conflict` | 対象スタッフが`inactive`、または指定店舗へすでに有効所属している |
+| `422 Unprocessable Content` | `roles`が空、重複、または指定できない役割を含む |
+
+## スタッフの店舗内役割変更
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `PATCH` | `/api/v1/staff/{staff_id}/store-memberships/{membership_id}/roles` | ログイン中の事業者管理者が、スタッフの店舗内役割を変更する | Cognitoアクセストークン |
+
+事業者管理者だけが呼び出せる。対象スタッフと`membership_id`の店舗所属が一致し、所属状態が`active`であることを確認する。店舗管理者とトレーナーは呼び出せない。
+
+### リクエスト
+
+```json
+{
+  "roles": ["trainer", "store_admin"]
+}
+```
+
+`roles`には、変更後に有効としたい`trainer`または`store_admin`を1件以上指定する。`organization_admin`は店舗に紐づかないため、このAPIでは指定できない。
+
+FastAPIは、リクエストにない現在の有効役割を`inactive`へ変更して`revoked_at`を記録する。新たに指定された役割は作成または再び`active`にする。役割の変更履歴を残すため、既存の役割行を物理削除しない。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、変更後に有効な役割を返す。
+
+```json
+{
+  "membership_id": "staff_store_membership_001",
+  "roles": ["trainer", "store_admin"]
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 事業者管理者ではない、または有効な役割がない |
+| `404 Not Found` | 指定したスタッフまたは店舗所属が存在しない、または一致しない |
+| `409 Conflict` | 対象スタッフまたは店舗所属が`inactive` |
+| `422 Unprocessable Content` | `roles`が空、重複、または指定できない役割を含む |
 
 ## スタッフの招待
 
