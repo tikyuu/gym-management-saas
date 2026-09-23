@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum,
     ForeignKey,
     Integer,
     SmallInteger,
@@ -18,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class MenuStatus(StrEnum):
@@ -70,7 +70,7 @@ class Menu(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     duration_minutes: Mapped[int] = mapped_column(SmallInteger)
     status: Mapped[MenuStatus] = mapped_column(
-        Enum(MenuStatus, name="menu_status"),
+        value_enum(MenuStatus, name="menu_status"),
         default=MenuStatus.DRAFT,
         server_default=MenuStatus.DRAFT.value,
     )
@@ -99,7 +99,7 @@ class StoreMenu(Base):
         primary_key=True,
     )
     status: Mapped[AvailabilityStatus] = mapped_column(
-        Enum(AvailabilityStatus, name="availability_status"),
+        value_enum(AvailabilityStatus, name="availability_status"),
         default=AvailabilityStatus.ACTIVE,
         server_default=AvailabilityStatus.ACTIVE.value,
     )
@@ -128,7 +128,7 @@ class TrainerMenu(Base):
         primary_key=True,
     )
     status: Mapped[AvailabilityStatus] = mapped_column(
-        Enum(AvailabilityStatus, name="availability_status"),
+        value_enum(AvailabilityStatus, name="availability_status"),
         default=AvailabilityStatus.ACTIVE,
         server_default=AvailabilityStatus.ACTIVE.value,
     )
@@ -180,17 +180,17 @@ class Plan(Base):
     )
     name: Mapped[str] = mapped_column(String(255))
     usage_type: Mapped[PlanUsageType] = mapped_column(
-        Enum(PlanUsageType, name="plan_usage_type"),
+        value_enum(PlanUsageType, name="plan_usage_type"),
     )
     period_type: Mapped[PlanPeriodType] = mapped_column(
-        Enum(PlanPeriodType, name="plan_period_type"),
+        value_enum(PlanPeriodType, name="plan_period_type"),
     )
     usage_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     period_months: Mapped[int] = mapped_column(SmallInteger)
     price_yen: Mapped[int] = mapped_column(Integer)
     carryover_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[PlanStatus] = mapped_column(
-        Enum(PlanStatus, name="plan_status"),
+        value_enum(PlanStatus, name="plan_status"),
         default=PlanStatus.DRAFT,
         server_default=PlanStatus.DRAFT.value,
     )
@@ -219,7 +219,7 @@ class PlanStore(Base):
         primary_key=True,
     )
     status: Mapped[AvailabilityStatus] = mapped_column(
-        Enum(AvailabilityStatus, name="availability_status"),
+        value_enum(AvailabilityStatus, name="availability_status"),
         default=AvailabilityStatus.ACTIVE,
         server_default=AvailabilityStatus.ACTIVE.value,
     )
@@ -248,7 +248,7 @@ class PlanMenu(Base):
         primary_key=True,
     )
     status: Mapped[AvailabilityStatus] = mapped_column(
-        Enum(AvailabilityStatus, name="availability_status"),
+        value_enum(AvailabilityStatus, name="availability_status"),
         default=AvailabilityStatus.ACTIVE,
         server_default=AvailabilityStatus.ACTIVE.value,
     )

@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum,
     ForeignKey,
     ForeignKeyConstraint,
     Uuid,
@@ -16,6 +15,7 @@ from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class WorkShiftStatus(StrEnum):
@@ -62,7 +62,7 @@ class WorkShift(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[WorkShiftStatus] = mapped_column(
-        Enum(WorkShiftStatus, name="work_shift_status"),
+        value_enum(WorkShiftStatus, name="work_shift_status"),
         default=WorkShiftStatus.SCHEDULED,
         server_default=WorkShiftStatus.SCHEDULED.value,
     )
@@ -103,7 +103,7 @@ class UnavailablePeriod(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     reason: Mapped[UnavailablePeriodReason] = mapped_column(
-        Enum(UnavailablePeriodReason, name="unavailable_period_reason"),
+        value_enum(UnavailablePeriodReason, name="unavailable_period_reason"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -7,7 +7,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     SmallInteger,
     String,
@@ -20,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class StoreStatus(StrEnum):
@@ -51,7 +51,7 @@ class Store(Base):
     address: Mapped[str] = mapped_column(Text)
     phone_number: Mapped[str] = mapped_column(String(32))
     status: Mapped[StoreStatus] = mapped_column(
-        Enum(StoreStatus, name="store_status"),
+        value_enum(StoreStatus, name="store_status"),
         default=StoreStatus.DRAFT,
         server_default=StoreStatus.DRAFT.value,
     )

@@ -6,7 +6,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     String,
     UniqueConstraint,
@@ -16,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class MemberStatus(StrEnum):
@@ -56,7 +56,7 @@ class Member(Base):
     phone_number: Mapped[str] = mapped_column(String(32))
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[MemberStatus] = mapped_column(
-        Enum(MemberStatus, name="member_status"),
+        value_enum(MemberStatus, name="member_status"),
         default=MemberStatus.ACTIVE,
         server_default=MemberStatus.ACTIVE.value,
     )

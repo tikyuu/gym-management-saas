@@ -6,7 +6,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     Text,
     Uuid,
@@ -16,6 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class ContractStatus(StrEnum):
@@ -42,7 +42,7 @@ class Contract(Base):
     plan_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("plans.id"))
     plan_snapshot: Mapped[dict[str, object]] = mapped_column(JSONB)
     status: Mapped[ContractStatus] = mapped_column(
-        Enum(ContractStatus, name="contract_status"),
+        value_enum(ContractStatus, name="contract_status"),
         default=ContractStatus.PENDING,
         server_default=ContractStatus.PENDING.value,
     )
@@ -70,10 +70,10 @@ class ContractStatusHistory(Base):
         nullable=True,
     )
     previous_status: Mapped[ContractStatus] = mapped_column(
-        Enum(ContractStatus, name="contract_status"),
+        value_enum(ContractStatus, name="contract_status"),
     )
     new_status: Mapped[ContractStatus] = mapped_column(
-        Enum(ContractStatus, name="contract_status"),
+        value_enum(ContractStatus, name="contract_status"),
     )
     reason: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(

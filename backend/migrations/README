@@ -1,1 +1,10 @@
-Generic single-database configuration.
+初回マイグレーションは、RDSと同じVPC内の一時的なECS Taskから実行する。
+通常のFastAPI Taskとは別の、DDL権限を持つDBユーザーの認証情報を渡す。
+
+必要な環境変数: DB_HOST、DB_PORT（省略時5432）、DB_NAME、DB_USERNAME、
+DB_PASSWORD、DB_SSL_ROOT_CERT（信頼するRDS CA証明書のファイルパス）。
+
+SQLだけ確認する場合は `uv run alembic upgrade head --sql` を実行する。
+実DBへ適用する場合は、一時Task内で `uv run alembic upgrade head` を実行する。
+初回リビジョンは重複防止制約に必要な btree_gist 拡張も作成する。
+ダウングレードではアプリのテーブルとEnum型を削除し、共有され得る拡張は残す。
