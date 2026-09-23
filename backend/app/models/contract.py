@@ -10,8 +10,9 @@ from sqlalchemy import (
     Text,
     Uuid,
     func,
+    text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ExcludeConstraint, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -35,6 +36,12 @@ class Contract(Base):
             "starts_on <= ends_on",
             name="ck_contracts_date_range",
         ),
+        ExcludeConstraint(
+            ("member_id", "="),
+            (text("daterange(starts_on, ends_on, '[]')"), "&&"),
+            where=text("status IN ('pending', 'scheduled', 'active', 'paused')"),
+            name="ex_contracts_member_active_period",
+        ).ddl_if(dialect="postgresql"),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
