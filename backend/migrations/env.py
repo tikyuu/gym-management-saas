@@ -4,6 +4,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+import app.models.catalog
+import app.models.contract
+import app.models.member
 import app.models.organization
 import app.models.staff
 import app.models.store
