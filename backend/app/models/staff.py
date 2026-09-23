@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     String,
@@ -17,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class StaffStatus(StrEnum):
@@ -56,7 +56,7 @@ class Staff(Base):
     )
     name: Mapped[str] = mapped_column(String(255))
     status: Mapped[StaffStatus] = mapped_column(
-        Enum(StaffStatus, name="staff_status"),
+        value_enum(StaffStatus, name="staff_status"),
         default=StaffStatus.INVITED,
         server_default=StaffStatus.INVITED.value,
     )
@@ -97,7 +97,7 @@ class StaffStoreMembership(Base):
     staff_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("staff.id"))
     store_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("stores.id"))
     status: Mapped[StaffStoreMembershipStatus] = mapped_column(
-        Enum(StaffStoreMembershipStatus, name="staff_store_membership_status"),
+        value_enum(StaffStoreMembershipStatus, name="staff_store_membership_status"),
         default=StaffStoreMembershipStatus.ACTIVE,
         server_default=StaffStoreMembershipStatus.ACTIVE.value,
     )
@@ -162,10 +162,10 @@ class StaffRole(Base):
         nullable=True,
     )
     role: Mapped[StaffRoleType] = mapped_column(
-        Enum(StaffRoleType, name="staff_role_type"),
+        value_enum(StaffRoleType, name="staff_role_type"),
     )
     status: Mapped[StaffRoleStatus] = mapped_column(
-        Enum(StaffRoleStatus, name="staff_role_status"),
+        value_enum(StaffRoleStatus, name="staff_role_status"),
         default=StaffRoleStatus.ACTIVE,
         server_default=StaffRoleStatus.ACTIVE.value,
     )

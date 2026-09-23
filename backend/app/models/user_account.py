@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    Enum,
     String,
     UniqueConstraint,
     Uuid,
@@ -14,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class UserAccountStatus(StrEnum):
@@ -42,13 +42,7 @@ class UserAccount(Base):
     user_pool_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     cognito_sub: Mapped[str | None] = mapped_column(String(36), nullable=True)
     status: Mapped[UserAccountStatus] = mapped_column(
-        Enum(
-            UserAccountStatus,
-            name="user_account_status",
-            values_callable=lambda enum_class: [
-                status.value for status in enum_class
-            ],
-        ),
+        value_enum(UserAccountStatus, name="user_account_status"),
         default=UserAccountStatus.ACTIVE,
         server_default=UserAccountStatus.ACTIVE.value,
     )

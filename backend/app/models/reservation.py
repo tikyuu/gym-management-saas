@@ -6,7 +6,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     ForeignKeyConstraint,
     Integer,
@@ -19,6 +18,7 @@ from sqlalchemy.dialects.postgresql import ExcludeConstraint, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.models.enums import value_enum
 
 
 class ReservationStatus(StrEnum):
@@ -78,7 +78,7 @@ class Reservation(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     status: Mapped[ReservationStatus] = mapped_column(
-        Enum(ReservationStatus, name="reservation_status"),
+        value_enum(ReservationStatus, name="reservation_status"),
         default=ReservationStatus.CONFIRMED,
         server_default=ReservationStatus.CONFIRMED.value,
     )
@@ -107,10 +107,10 @@ class ReservationStatusHistory(Base):
         nullable=True,
     )
     previous_status: Mapped[ReservationStatus] = mapped_column(
-        Enum(ReservationStatus, name="reservation_status"),
+        value_enum(ReservationStatus, name="reservation_status"),
     )
     new_status: Mapped[ReservationStatus] = mapped_column(
-        Enum(ReservationStatus, name="reservation_status"),
+        value_enum(ReservationStatus, name="reservation_status"),
     )
     reason: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
@@ -146,7 +146,7 @@ class UsageEntry(Base):
         nullable=True,
     )
     entry_type: Mapped[UsageEntryType] = mapped_column(
-        Enum(UsageEntryType, name="usage_entry_type"),
+        value_enum(UsageEntryType, name="usage_entry_type"),
     )
     available_usage_delta: Mapped[int] = mapped_column(Integer)
     reserved_usage_delta: Mapped[int] = mapped_column(Integer)
