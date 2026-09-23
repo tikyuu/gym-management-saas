@@ -371,6 +371,32 @@ def test_contract_lists_details_and_termination(contract_environment) -> None:
     assert client.get("/api/v1/members/me/contracts?scope=history").json()["items"][0]["status"] == "terminated"
 
 
+def test_work_shift_and_unavailable_period_lifecycle(contract_environment) -> None:
+    client, _, identifiers, identity, users = contract_environment
+    identity["current"] = users["admin"]
+    shift_payload = {
+        "staff_id": str(identifiers["trainer_id"]),
+        "store_id": str(identifiers["store_id"]),
+        "starts_at": "2030-10-11T09:00:00+09:00",
+        "ends_at": "2030-10-11T18:00:00+09:00",
+    }
+    created = client.post("/api/v1/work-shifts", json=shift_payload)
+    assert created.status_code == 201
+    shift_id = created.json()["id"]
+    assert client.post("/api/v1/work-shifts", json=shift_payload).status_code == 409
+    assert len(client.get("/api/v1/work-shifts?from=2030-10-11&to=2030-10-11").json()["items"]) == 1
+    period = client.post(f"/api/v1/work-shifts/{shift_id}/unavailable-periods", json={
+        "starts_at": "2030-10-11T12:00:00+09:00",
+        "ends_at": "2030-10-11T13:00:00+09:00",
+        "reason": "break",
+    })
+    assert period.status_code == 201
+    assert client.delete(f"/api/v1/work-shifts/{shift_id}/unavailable-periods/{period.json()['id']}").status_code == 204
+    assert client.post(f"/api/v1/work-shifts/{shift_id}/cancel").status_code == 200
+    identity["current"] = users["trainer"]
+    assert len(client.get("/api/v1/staff/me/work-shifts?from=2030-10-11&to=2030-10-11").json()["items"]) == 1
+
+
 def test_application_rejects_inactive_plan_or_member(contract_environment) -> None:
     client, engine, identifiers, _, _ = contract_environment
     with Session(engine) as session:
