@@ -42,7 +42,13 @@ class UserAccount(Base):
     user_pool_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     cognito_sub: Mapped[str | None] = mapped_column(String(36), nullable=True)
     status: Mapped[UserAccountStatus] = mapped_column(
-        Enum(UserAccountStatus, name="user_account_status"),
+        Enum(
+            UserAccountStatus,
+            name="user_account_status",
+            values_callable=lambda enum_class: [
+                status.value for status in enum_class
+            ],
+        ),
         default=UserAccountStatus.ACTIVE,
         server_default=UserAccountStatus.ACTIVE.value,
     )
