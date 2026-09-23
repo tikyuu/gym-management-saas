@@ -141,6 +141,9 @@ class StaffRole(Base):
             postgresql_where=text(
                 "status = 'active' AND role = 'organization_admin'"
             ),
+            sqlite_where=text(
+                "status = 'active' AND role = 'organization_admin'"
+            ),
         ),
         Index(
             "uq_staff_roles_active_store_role",
@@ -149,6 +152,9 @@ class StaffRole(Base):
             "role",
             unique=True,
             postgresql_where=text(
+                "status = 'active' AND role IN ('store_admin', 'trainer')"
+            ),
+            sqlite_where=text(
                 "status = 'active' AND role IN ('store_admin', 'trainer')"
             ),
         ),

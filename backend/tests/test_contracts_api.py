@@ -397,6 +397,39 @@ def test_work_shift_and_unavailable_period_lifecycle(contract_environment) -> No
     assert len(client.get("/api/v1/staff/me/work-shifts?from=2030-10-11&to=2030-10-11").json()["items"]) == 1
 
 
+def test_staff_profiles_and_role_management(contract_environment) -> None:
+    client, engine, identifiers, identity, users = contract_environment
+    identity["current"] = users["admin"]
+    assert client.get("/api/v1/staff/me").status_code == 200
+    listed = client.get("/api/v1/staff")
+    assert listed.status_code == 200
+    assert len(listed.json()["items"]) == 2
+    trainer_id = identifiers["trainer_id"]
+    detail = client.get(f"/api/v1/staff/{trainer_id}")
+    assert detail.status_code == 200
+    assert detail.json()["stores"][0]["id"] == str(identifiers["store_id"])
+    granted = client.post(f"/api/v1/staff/{trainer_id}/organization-admin-role")
+    assert granted.status_code == 201
+    assert client.delete(f"/api/v1/staff/{trainer_id}/organization-admin-role").status_code == 200
+    assert client.delete(f"/api/v1/staff/{identifiers['admin_id']}/organization-admin-role").status_code == 409
+    with Session(engine) as session:
+        other_store = Store(
+            organization_id=session.get(Store, identifiers["store_id"]).organization_id,
+            name="新宿店", address="東京都", phone_number="0312345679",
+        )
+        session.add(other_store)
+        session.commit()
+        other_store_id = other_store.id
+    membership = client.post(f"/api/v1/staff/{trainer_id}/store-memberships", json={
+        "store_id": str(other_store_id), "roles": ["trainer"],
+    })
+    assert membership.status_code == 201
+    membership_id = membership.json()["id"]
+    assert client.post(f"/api/v1/staff/{trainer_id}/store-memberships/{membership_id}/deactivate").status_code == 200
+    identity["current"] = users["trainer"]
+    assert client.get("/api/v1/staff").status_code == 403
+
+
 def test_application_rejects_inactive_plan_or_member(contract_environment) -> None:
     client, engine, identifiers, _, _ = contract_environment
     with Session(engine) as session:
