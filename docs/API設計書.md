@@ -27,6 +27,9 @@
 | `POST` | `/api/v1/work-shifts` | 管理者が勤務予定を登録する | Cognitoアクセストークン |
 | `PATCH` | `/api/v1/work-shifts/{shift_id}` | 管理者が勤務予定の日時を変更する | Cognitoアクセストークン |
 | `POST` | `/api/v1/work-shifts/{shift_id}/cancel` | 管理者が勤務予定を取消する | Cognitoアクセストークン |
+| `POST` | `/api/v1/work-shifts/{shift_id}/unavailable-periods` | スタッフが勤務予定内の予約不可時間を登録する | Cognitoアクセストークン |
+| `PATCH` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | スタッフが予約不可時間を変更する | Cognitoアクセストークン |
+| `DELETE` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | スタッフが予約不可時間を削除する | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/complete` | スタッフが予約を来店完了にする | Cognitoアクセストークン |
 | `POST` | `/api/v1/staff/me/reservations/{reservation_id}/no-show` | スタッフが予約を無断欠席にする | Cognitoアクセストークン |
 | `GET` | `/api/v1/staff/me` | スタッフ自身のプロフィールと操作範囲を取得する | Cognitoアクセストークン |
@@ -648,13 +651,21 @@ HTTPステータス`200 OK`で、キャンセル結果を返す。
       "store": {
         "id": "store_001",
         "name": "渋谷店"
-      }
+      },
+      "unavailable_periods": [
+        {
+          "id": "unavailable_period_001",
+          "starts_at": "2026-10-10T12:00:00+09:00",
+          "ends_at": "2026-10-10T13:00:00+09:00",
+          "reason": "break"
+        }
+      ]
     }
   ]
 }
 ```
 
-`scheduled`と`cancelled`を返す。勤務時間内の休憩・研修などの予約不可時間は予約枠の計算にのみ使用し、このAPIでは返さない。
+`scheduled`と`cancelled`を返す。各勤務予定に、休憩・研修などの予約不可時間を`unavailable_periods`として含める。勤務予定が複数あっても、カレンダー表示に必要な情報を1回のリクエストで取得するためとする。
 
 ### エラー時のレスポンス
 
@@ -696,13 +707,21 @@ HTTPステータス`200 OK`で、キャンセル結果を返す。
       "staff": {
         "id": "staff_001",
         "name": "佐藤 花子"
-      }
+      },
+      "unavailable_periods": [
+        {
+          "id": "unavailable_period_001",
+          "starts_at": "2026-10-10T12:00:00+09:00",
+          "ends_at": "2026-10-10T13:00:00+09:00",
+          "reason": "break"
+        }
+      ]
     }
   ]
 }
 ```
 
-`scheduled`と`cancelled`を返す。スタッフの電話番号、メールアドレス、予約内容など、勤務予定の管理に不要な情報は返さない。
+`scheduled`と`cancelled`を返す。各勤務予定に、休憩・研修などの予約不可時間を`unavailable_periods`として含める。スタッフの電話番号、メールアドレス、予約内容など、勤務予定の管理に不要な情報は返さない。
 
 ### エラー時のレスポンス
 
@@ -839,6 +858,117 @@ HTTPステータス`200 OK`で、取消後の勤務予定を返す。
 | `403 Forbidden` | 店舗管理者・事業者管理者ではない、または対象勤務予定が権限範囲外 |
 | `404 Not Found` | 指定した勤務予定が存在しない |
 | `409 Conflict` | 勤務予定が`scheduled`ではない、開始時刻以降、または`confirmed`予約が残っている |
+
+## 予約不可時間の登録
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/work-shifts/{shift_id}/unavailable-periods` | ログイン中のスタッフが、勤務予定内の休憩・研修などの予約不可時間を登録する | Cognitoアクセストークン |
+
+トレーナーは自分自身の勤務予定だけに登録できる。店舗管理者は担当店舗、事業者管理者は事業者内の勤務予定に登録できる。
+
+### リクエスト
+
+```json
+{
+  "starts_at": "2026-10-10T12:00:00+09:00",
+  "ends_at": "2026-10-10T13:00:00+09:00",
+  "reason": "break"
+}
+```
+
+`reason`は必須とし、`break`（休憩）または`other`（研修など）を指定する。予約可能時間の計算には使用しないが、スタッフ・管理者が予約不可の種類を確認するために保持する。
+
+予約不可時間は、対象勤務予定の開始から終了までの範囲に収める。開始が終了より前であること、既存の予約不可時間および`confirmed`予約と重ならないことを確認する。過去の時間帯は登録しない。
+
+### 成功時のレスポンス
+
+HTTPステータス`201 Created`で、登録した予約不可時間を返す。
+
+```json
+{
+  "id": "unavailable_period_001",
+  "starts_at": "2026-10-10T12:00:00+09:00",
+  "ends_at": "2026-10-10T13:00:00+09:00",
+  "reason": "break"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 対象勤務予定が権限範囲外、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定した勤務予定が存在しない |
+| `409 Conflict` | 勤務予定が`scheduled`ではない、または既存の予約不可時間・`confirmed`予約と重複する |
+| `422 Unprocessable Content` | 日時形式が不正、開始が終了以降、勤務予定の範囲外、または開始時刻が過去 |
+
+## 予約不可時間の変更
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `PATCH` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | ログイン中のスタッフが、勤務予定内の予約不可時間を変更する | Cognitoアクセストークン |
+
+トレーナーは自分自身の勤務予定だけを変更できる。店舗管理者は担当店舗、事業者管理者は事業者内の予約不可時間を変更できる。対象は開始時刻より前の予約不可時間だけとする。
+
+### リクエスト
+
+```json
+{
+  "starts_at": "2026-10-10T12:30:00+09:00",
+  "ends_at": "2026-10-10T13:30:00+09:00",
+  "reason": "break"
+}
+```
+
+開始・終了日時は常に対で指定する。`reason`は`break`または`other`へ変更できる。変更後の時間帯が対象勤務予定の範囲内であり、既存の予約不可時間および`confirmed`予約と重ならないことを確認する。
+
+### 成功時のレスポンス
+
+HTTPステータス`200 OK`で、変更後の予約不可時間を返す。
+
+```json
+{
+  "id": "unavailable_period_001",
+  "starts_at": "2026-10-10T12:30:00+09:00",
+  "ends_at": "2026-10-10T13:30:00+09:00",
+  "reason": "break"
+}
+```
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 対象勤務予定が権限範囲外、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定した勤務予定または予約不可時間が存在しない |
+| `409 Conflict` | 勤務予定が`scheduled`ではない、予約不可時間の開始時刻以降、または変更後の時間帯が他の予約不可時間・`confirmed`予約と重複する |
+| `422 Unprocessable Content` | 日時形式が不正、開始が終了以降、または勤務予定の範囲外 |
+
+## 予約不可時間の削除
+
+| メソッド | パス | 用途 | 認証 |
+| --- | --- | --- | --- |
+| `DELETE` | `/api/v1/work-shifts/{shift_id}/unavailable-periods/{unavailable_period_id}` | ログイン中のスタッフが、勤務予定内の未来の予約不可時間を削除する | Cognitoアクセストークン |
+
+トレーナーは自分自身の勤務予定だけを操作できる。店舗管理者は担当店舗、事業者管理者は事業者内の予約不可時間を削除できる。対象は開始時刻より前の予約不可時間だけとする。
+
+予約不可時間には取消状態や履歴を保持する要件がないため、物理削除する。勤務予定とは異なり、`cancelled`へ状態変更するAPIは作成しない。
+
+### 成功時のレスポンス
+
+HTTPステータス`204 No Content`を返し、レスポンス本文は返さない。
+
+### エラー時のレスポンス
+
+| HTTPステータス | 条件 |
+| --- | --- |
+| `401 Unauthorized` | アクセストークンがない、有効期限切れ、または不正 |
+| `403 Forbidden` | 対象勤務予定が権限範囲外、または有効な役割・店舗所属がない |
+| `404 Not Found` | 指定した勤務予定または予約不可時間が存在しない |
+| `409 Conflict` | 勤務予定が`scheduled`ではない、または予約不可時間の開始時刻以降 |
 
 ## スタッフによる予約状態の変更
 
