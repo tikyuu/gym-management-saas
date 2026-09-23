@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -258,10 +258,10 @@ def replace_regular_hours(
     return {"hours": request.model_dump(mode="json")["hours"]}
 
 
-@router.put("/management/stores/{store_id}/special-days/{business_date}")
+@router.put("/management/stores/{store_id}/special-days/{date}")
 def save_special_day(
     store_id: UUID,
-    business_date: date,
+    business_date: Annotated[date, Path(alias="date")],
     request: SpecialDayPayload,
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db_session: Annotated[Session, Depends(get_db_session)],
@@ -285,10 +285,10 @@ def save_special_day(
     return {"date": business_date, **request.model_dump(mode="json")}
 
 
-@router.delete("/management/stores/{store_id}/special-days/{business_date}")
+@router.delete("/management/stores/{store_id}/special-days/{date}")
 def remove_special_day(
     store_id: UUID,
-    business_date: date,
+    business_date: Annotated[date, Path(alias="date")],
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db_session: Annotated[Session, Depends(get_db_session)],
 ) -> dict:
