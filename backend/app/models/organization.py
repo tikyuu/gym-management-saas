@@ -2,7 +2,7 @@ from enum import StrEnum
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Enum, String, Uuid, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -33,4 +33,25 @@ class Organization(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+
+class OrganizationStatusHistory(Base):
+    __tablename__ = "organization_status_histories"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("organizations.id"),
+    )
+    previous_status: Mapped[OrganizationStatus] = mapped_column(
+        Enum(OrganizationStatus, name="organization_status"),
+    )
+    new_status: Mapped[OrganizationStatus] = mapped_column(
+        Enum(OrganizationStatus, name="organization_status"),
+    )
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
     )
