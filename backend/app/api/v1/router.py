@@ -8,6 +8,7 @@ from app.api.v1.management_stores import router as management_stores_router
 from app.api.v1.management_catalog import router as management_catalog_router
 from app.api.v1.work_shifts import router as work_shifts_router
 from app.api.v1.staff_management import router as staff_management_router
+from app.api.v1.staff_reservations import router as staff_reservations_router
 from app.api.v1.members import router as members_router
 from app.api.v1.reservations import router as reservations_router
 
@@ -23,3 +24,4 @@ router.include_router(management_stores_router)
 router.include_router(management_catalog_router)
 router.include_router(work_shifts_router)
 router.include_router(staff_management_router)
+router.include_router(staff_reservations_router)
