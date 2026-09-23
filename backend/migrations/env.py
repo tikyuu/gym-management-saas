@@ -5,6 +5,8 @@ from sqlalchemy import pool
 
 from alembic import context
 import app.models.organization
+import app.models.staff
+import app.models.store
 import app.models.user_account
 from app.models.base import Base
 
