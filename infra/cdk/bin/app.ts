@@ -9,6 +9,7 @@ import { CertificateStack } from "../lib/stacks/certificate-stack";
 import { CiCdIdentityStack } from "../lib/stacks/ci-cd-identity-stack";
 import { CloudFrontStack } from "../lib/stacks/cloudfront-stack";
 import { ContainerRegistryStack } from "../lib/stacks/container-registry-stack";
+import { DatabaseOperationsStack } from "../lib/stacks/database-operations-stack";
 import { DatabaseStack } from "../lib/stacks/database-stack";
 import { EdgeMonitoringStack } from "../lib/stacks/edge-monitoring-stack";
 import { NetworkStack } from "../lib/stacks/network-stack";
@@ -150,7 +151,7 @@ const applicationMonitoringStack = new ApplicationMonitoringStack(
   },
 );
 
-new DatabaseStack(app, "DevDatabaseStack", {
+const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
   alertTopic: applicationMonitoringStack.alertTopic,
   applicationName: devConfig.applicationName,
   databaseAllocatedStorage: devConfig.databaseAllocatedStorage,
@@ -174,6 +175,13 @@ new DatabaseStack(app, "DevDatabaseStack", {
   },
   environmentName: devConfig.environmentName,
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
+});
+
+new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
+  env: {
+    region: devConfig.region,
+  },
+  repository: containerRegistryStack.repository,
 });
 
 const cloudFrontStack = new CloudFrontStack(app, "DevCloudFrontStack", {
