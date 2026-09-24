@@ -49,6 +49,7 @@ export const devConfig = {
   databaseInstanceClass: "db.t4g.micro",
   databaseMaxAllocatedStorage: 50,
   databaseMultiAz: false,
+  databaseName: "gym_management",
   databasePreferredBackupWindow: "19:00-19:30",
   databasePreferredMaintenanceWindow: "fri:20:00-fri:21:00",
   databaseRemovalPolicy: RemovalPolicy.DESTROY,
