@@ -178,9 +178,14 @@ const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
 });
 
 new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
+  applicationUserSecret: databaseStack.applicationUserSecret,
+  databaseHost: databaseStack.databaseEndpointAddress,
+  databaseName: devConfig.databaseName,
   env: {
     region: devConfig.region,
   },
+  masterUserSecretArn: databaseStack.masterUserSecretArn,
+  migrationUserSecret: databaseStack.migrationUserSecret,
   repository: containerRegistryStack.repository,
 });
 
