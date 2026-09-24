@@ -34,9 +34,11 @@ interface DatabaseStackProps extends StackProps {
 }
 
 export class DatabaseStack extends Stack {
+  public readonly applicationUserSecret: secretsmanager.ISecret;
   public readonly databaseEndpointAddress: string;
   public readonly databaseEndpointPort: string;
   public readonly masterUserSecretArn: string;
+  public readonly migrationUserSecret: secretsmanager.ISecret;
 
   constructor(scope: Construct, id: string, props: DatabaseStackProps) {
     super(scope, id, props);
@@ -113,25 +115,33 @@ export class DatabaseStack extends Stack {
       subscriptionName: `${resourceNamePrefix}-rds-failure-events`,
     });
 
-    new secretsmanager.Secret(this, "ApplicationUserSecret", {
-      generateSecretString: {
-        generateStringKey: "password",
-        passwordLength: 32,
-        secretStringTemplate: JSON.stringify({ username: "gym_app" }),
+    this.applicationUserSecret = new secretsmanager.Secret(
+      this,
+      "ApplicationUserSecret",
+      {
+        generateSecretString: {
+          generateStringKey: "password",
+          passwordLength: 32,
+          secretStringTemplate: JSON.stringify({ username: "gym_app" }),
+        },
+        removalPolicy: props.databaseRemovalPolicy,
+        secretName: `${resourceNamePrefix}-app-db-credentials`,
       },
-      removalPolicy: props.databaseRemovalPolicy,
-      secretName: `${resourceNamePrefix}-app-db-credentials`,
-    });
+    );
 
-    new secretsmanager.Secret(this, "MigrationUserSecret", {
-      generateSecretString: {
-        generateStringKey: "password",
-        passwordLength: 32,
-        secretStringTemplate: JSON.stringify({ username: "gym_migrator" }),
+    this.migrationUserSecret = new secretsmanager.Secret(
+      this,
+      "MigrationUserSecret",
+      {
+        generateSecretString: {
+          generateStringKey: "password",
+          passwordLength: 32,
+          secretStringTemplate: JSON.stringify({ username: "gym_migrator" }),
+        },
+        removalPolicy: props.databaseRemovalPolicy,
+        secretName: `${resourceNamePrefix}-migration-db-credentials`,
       },
-      removalPolicy: props.databaseRemovalPolicy,
-      secretName: `${resourceNamePrefix}-migration-db-credentials`,
-    });
+    );
 
     this.databaseEndpointAddress = databaseInstance.attrEndpointAddress;
     this.databaseEndpointPort = databaseInstance.attrEndpointPort;
