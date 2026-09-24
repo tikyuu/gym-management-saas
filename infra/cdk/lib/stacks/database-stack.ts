@@ -23,6 +23,7 @@ interface DatabaseStackProps extends StackProps {
   databaseInstanceClass: string;
   databaseMaxAllocatedStorage: number;
   databaseMultiAz: boolean;
+  databaseName: string;
   databasePreferredBackupWindow: string;
   databasePreferredMaintenanceWindow: string;
   databaseRemovalPolicy: RemovalPolicy;
@@ -76,6 +77,7 @@ export class DatabaseStack extends Stack {
       deletionProtection: props.databaseDeletionProtection,
       dbInstanceIdentifier: props.databaseInstanceIdentifier,
       dbInstanceClass: props.databaseInstanceClass,
+      dbName: props.databaseName,
       dbSubnetGroupName: databaseSubnetGroup.ref,
       engine: "postgres",
       engineVersion: props.databaseEngineVersion,
@@ -119,6 +121,16 @@ export class DatabaseStack extends Stack {
       },
       removalPolicy: props.databaseRemovalPolicy,
       secretName: `${resourceNamePrefix}-app-db-credentials`,
+    });
+
+    new secretsmanager.Secret(this, "MigrationUserSecret", {
+      generateSecretString: {
+        generateStringKey: "password",
+        passwordLength: 32,
+        secretStringTemplate: JSON.stringify({ username: "gym_migrator" }),
+      },
+      removalPolicy: props.databaseRemovalPolicy,
+      secretName: `${resourceNamePrefix}-migration-db-credentials`,
     });
 
     this.databaseEndpointAddress = databaseInstance.attrEndpointAddress;

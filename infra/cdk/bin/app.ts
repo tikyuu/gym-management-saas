@@ -162,6 +162,7 @@ new DatabaseStack(app, "DevDatabaseStack", {
   databaseInstanceClass: devConfig.databaseInstanceClass,
   databaseMaxAllocatedStorage: devConfig.databaseMaxAllocatedStorage,
   databaseMultiAz: devConfig.databaseMultiAz,
+  databaseName: devConfig.databaseName,
   databasePreferredBackupWindow: devConfig.databasePreferredBackupWindow,
   databasePreferredMaintenanceWindow:
     devConfig.databasePreferredMaintenanceWindow,
