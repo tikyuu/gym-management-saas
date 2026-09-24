@@ -179,6 +179,8 @@ const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
 
 new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
   applicationUserSecret: databaseStack.applicationUserSecret,
+  databaseBootstrapTaskCpu: devConfig.databaseBootstrapTaskCpu,
+  databaseBootstrapTaskMemoryMiB: devConfig.databaseBootstrapTaskMemoryMiB,
   databaseHost: databaseStack.databaseEndpointAddress,
   databaseName: devConfig.databaseName,
   env: {

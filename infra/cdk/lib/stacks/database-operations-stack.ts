@@ -8,6 +8,8 @@ import { Construct } from "constructs";
 
 interface DatabaseOperationsStackProps extends StackProps {
   applicationUserSecret: secretsmanager.ISecret;
+  databaseBootstrapTaskCpu: number;
+  databaseBootstrapTaskMemoryMiB: number;
   databaseHost: string;
   databaseName: string;
   masterUserSecretArn: string;

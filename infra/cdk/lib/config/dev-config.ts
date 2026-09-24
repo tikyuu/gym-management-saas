@@ -43,6 +43,8 @@ export const devConfig = {
   databaseAllocatedStorage: 20,
   databaseAutoMinorVersionUpgrade: true,
   databaseBackupRetentionPeriod: 1,
+  databaseBootstrapTaskCpu: 256,
+  databaseBootstrapTaskMemoryMiB: 512,
   databaseDeletionProtection: false,
   databaseEngineVersion: "18.4",
   databaseInstanceIdentifier: "gym-management-dev-postgresql",
