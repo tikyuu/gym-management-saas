@@ -49,6 +49,12 @@ export class DatabaseOperationsStack extends Stack {
         props.repository,
         databaseBootstrapImageTag.valueAsString,
       ),
+      secrets: {
+        DB_ADMIN_USERNAME: ecs.Secret.fromSecretsManager(masterUserSecret, "username"),
+        DB_ADMIN_PASSWORD: ecs.Secret.fromSecretsManager(masterUserSecret, "password"),
+        DB_MIGRATION_USERNAME: ecs.Secret.fromSecretsManager(props.migrationUserSecret, "username"),
+        DB_MIGRATION_PASSWORD: ecs.Secret.fromSecretsManager(props.migrationUserSecret, "password"),
+      },
     });
   }
 }
