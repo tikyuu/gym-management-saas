@@ -25,6 +25,8 @@ interface DatabaseOperationsStackProps extends StackProps {
 }
 
 export class DatabaseOperationsStack extends Stack {
+  public readonly taskDefinition: ecs.FargateTaskDefinition;
+
   constructor(scope: Construct, id: string, props: DatabaseOperationsStackProps) {
     super(scope, id, props);
 
@@ -45,12 +47,13 @@ export class DatabaseOperationsStack extends Stack {
       props.masterUserSecretArn,
     );
 
-    const taskDefinition = new ecs.FargateTaskDefinition(this, "DatabaseBootstrapTaskDefinition", {
+    this.taskDefinition = new ecs.FargateTaskDefinition(this, "DatabaseBootstrapTaskDefinition", {
       cpu: props.databaseBootstrapTaskCpu,
+      family: `${props.applicationName}-${props.environmentName}-db-bootstrap`,
       memoryLimitMiB: props.databaseBootstrapTaskMemoryMiB,
     });
 
-    taskDefinition.addContainer("DatabaseBootstrapContainer", {
+    this.taskDefinition.addContainer("DatabaseBootstrapContainer", {
       command: ["/app/.venv/bin/python", "-m", "app.bootstrap_db"],
       environment: {
         DB_HOST: props.databaseHost,
@@ -76,7 +79,7 @@ export class DatabaseOperationsStack extends Stack {
     });
 
     new CfnOutput(this, "DatabaseBootstrapTaskDefinitionArn", {
-      value: taskDefinition.taskDefinitionArn,
+      value: this.taskDefinition.taskDefinitionArn,
     });
   }
 }

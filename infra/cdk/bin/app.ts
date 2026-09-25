@@ -17,7 +17,7 @@ import { WafStack } from "../lib/stacks/waf-stack";
 
 const app = new cdk.App();
 
-new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
+const ciCdIdentityStack = new CiCdIdentityStack(app, "DevCiCdIdentityStack", {
   env: {
     region: devConfig.region,
   },
@@ -177,7 +177,7 @@ const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
 });
 
-new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
+const databaseOperationsStack = new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
   applicationName: devConfig.applicationName,
   applicationUserSecret: databaseStack.applicationUserSecret,
   databaseBootstrapTaskCpu: devConfig.databaseBootstrapTaskCpu,
@@ -192,6 +192,8 @@ new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
   migrationUserSecret: databaseStack.migrationUserSecret,
   repository: containerRegistryStack.repository,
 });
+
+ciCdIdentityStack.grantDatabaseBootstrapPassRole(databaseOperationsStack.taskDefinition);
 
 const cloudFrontStack = new CloudFrontStack(app, "DevCloudFrontStack", {
   albSecurityGroupId: networkStack.albSecurityGroup.securityGroupId,

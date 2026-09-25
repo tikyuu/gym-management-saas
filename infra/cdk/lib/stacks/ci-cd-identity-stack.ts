@@ -1,8 +1,11 @@
 import { Stack, StackProps } from "aws-cdk-lib";
+import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Construct } from "constructs";
 
 export class CiCdIdentityStack extends Stack {
+  private readonly gitHubDevDeployRole: iam.Role;
+
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
@@ -11,7 +14,7 @@ export class CiCdIdentityStack extends Stack {
       clientIds: ["sts.amazonaws.com"],
     });
 
-    const gitHubDevDeployRole = new iam.Role(this, "GitHubDevDeployRole", {
+    this.gitHubDevDeployRole = new iam.Role(this, "GitHubDevDeployRole", {
       assumedBy: new iam.OpenIdConnectPrincipal(gitHubProvider, {
         StringEquals: {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
@@ -23,7 +26,7 @@ export class CiCdIdentityStack extends Stack {
       roleName: "gym-management-dev-github-deploy-role",
     });
 
-    gitHubDevDeployRole.addToPolicy(
+    this.gitHubDevDeployRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ["sts:AssumeRole"],
         resources: [
@@ -34,14 +37,14 @@ export class CiCdIdentityStack extends Stack {
       }),
     );
 
-    gitHubDevDeployRole.addToPolicy(
+    this.gitHubDevDeployRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ["ecr:GetAuthorizationToken"],
         resources: ["*"],
       }),
     );
 
-    gitHubDevDeployRole.addToPolicy(
+    this.gitHubDevDeployRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
           "ecr:BatchCheckLayerAvailability",
@@ -57,6 +60,45 @@ export class CiCdIdentityStack extends Stack {
             resource: "repository",
             resourceName: "gym-management-dev-api-ecr",
           }),
+        ],
+      }),
+    );
+
+    this.gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["ecs:RunTask"],
+        conditions: {
+          ArnEquals: {
+            "ecs:cluster": this.formatArn({
+              service: "ecs",
+              resource: "cluster",
+              resourceName: "gym-management-dev-ecs-cluster",
+            }),
+          },
+        },
+        resources: [
+          this.formatArn({
+            service: "ecs",
+            resource: "task-definition",
+            resourceName: "gym-management-dev-db-bootstrap:*",
+          }),
+        ],
+      }),
+    );
+  }
+
+  public grantDatabaseBootstrapPassRole(taskDefinition: ecs.FargateTaskDefinition): void {
+    this.gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["iam:PassRole"],
+        conditions: {
+          StringEquals: {
+            "iam:PassedToService": "ecs-tasks.amazonaws.com",
+          },
+        },
+        resources: [
+          taskDefinition.taskRole.roleArn,
+          taskDefinition.obtainExecutionRole().roleArn,
         ],
       }),
     );
