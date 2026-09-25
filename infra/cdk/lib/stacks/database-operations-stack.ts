@@ -1,4 +1,5 @@
 import {
+  CfnOutput,
   CfnParameter,
   RemovalPolicy,
   Stack,
@@ -72,6 +73,10 @@ export class DatabaseOperationsStack extends Stack {
         DB_APP_USERNAME: ecs.Secret.fromSecretsManager(props.applicationUserSecret, "username"),
         DB_APP_PASSWORD: ecs.Secret.fromSecretsManager(props.applicationUserSecret, "password"),
       },
+    });
+
+    new CfnOutput(this, "DatabaseBootstrapTaskDefinitionArn", {
+      value: taskDefinition.taskDefinitionArn,
     });
   }
 }
