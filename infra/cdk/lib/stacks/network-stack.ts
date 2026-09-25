@@ -1,4 +1,11 @@
-import { Stack, StackProps, Tags, aws_ec2 as ec2 } from "aws-cdk-lib";
+import {
+  CfnOutput,
+  Fn,
+  Stack,
+  StackProps,
+  Tags,
+  aws_ec2 as ec2,
+} from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { ApplicationNetworkConstruct } from "../constructs/network/application-network-construct";
 import { DatabaseNetworkConstruct } from "../constructs/network/database-network-construct";
@@ -120,5 +127,16 @@ export class NetworkStack extends Stack {
     this.databaseSubnetIds = databaseNetwork.subnets.map(
       (subnet) => subnet.ref,
     );
+
+    new CfnOutput(this, "DatabaseBootstrapSecurityGroupId", {
+      value: this.databaseBootstrapSecurityGroup.securityGroupId,
+    });
+
+    new CfnOutput(this, "ApplicationSubnetIds", {
+      value: Fn.join(
+        ",",
+        this.applicationSubnets.map((subnet) => subnet.subnetId),
+      ),
+    });
   }
 }
