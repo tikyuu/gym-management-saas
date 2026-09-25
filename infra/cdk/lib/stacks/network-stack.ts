@@ -20,6 +20,7 @@ interface NetworkStackProps extends StackProps {
 export class NetworkStack extends Stack {
   public readonly albSecurityGroup: ec2.ISecurityGroup;
   public readonly applicationSubnets: ec2.ISubnet[];
+  public readonly databaseBootstrapSecurityGroup: ec2.ISecurityGroup;
   public readonly databaseSubnetIds: string[];
   public readonly ecsSecurityGroup: ec2.ISecurityGroup;
   public readonly internalAlbSubnets: ec2.ISubnet[];
@@ -49,6 +50,8 @@ export class NetworkStack extends Stack {
     });
 
     this.albSecurityGroup = securityGroups.albSecurityGroup;
+    this.databaseBootstrapSecurityGroup =
+      securityGroups.databaseBootstrapSecurityGroup;
     this.ecsSecurityGroup = securityGroups.ecsSecurityGroup;
     this.rdsSecurityGroup = securityGroups.rdsSecurityGroup;
 

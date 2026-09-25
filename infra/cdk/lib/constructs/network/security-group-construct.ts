@@ -8,6 +8,7 @@ interface SecurityGroupConstructProps {
 
 export class SecurityGroupConstruct extends Construct {
   public readonly albSecurityGroup: ec2.SecurityGroup;
+  public readonly databaseBootstrapSecurityGroup: ec2.SecurityGroup;
   public readonly ecsSecurityGroup: ec2.SecurityGroup;
   public readonly rdsSecurityGroup: ec2.SecurityGroup;
 
@@ -38,6 +39,17 @@ export class SecurityGroupConstruct extends Construct {
       "Allow traffic from the internal ALB",
     );
 
+    this.databaseBootstrapSecurityGroup = new ec2.SecurityGroup(
+      this,
+      "DatabaseBootstrapSecurityGroup",
+      {
+        allowAllOutbound: true,
+        description: "Security group for the database bootstrap task",
+        securityGroupName: `${props.resourceNamePrefix}-db-bootstrap-sg`,
+        vpc: props.vpc,
+      },
+    );
+
     this.rdsSecurityGroup = new ec2.SecurityGroup(this, "RdsSecurityGroup", {
       allowAllOutbound: true,
       description: "Security group for the RDS database",
@@ -49,6 +61,12 @@ export class SecurityGroupConstruct extends Construct {
       this.ecsSecurityGroup,
       ec2.Port.tcp(5432),
       "Allow PostgreSQL traffic from ECS tasks",
+    );
+
+    this.rdsSecurityGroup.addIngressRule(
+      this.databaseBootstrapSecurityGroup,
+      ec2.Port.tcp(5432),
+      "Allow PostgreSQL traffic from the database bootstrap task",
     );
   }
 }
