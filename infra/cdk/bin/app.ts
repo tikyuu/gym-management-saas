@@ -178,6 +178,7 @@ const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
 });
 
 new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
+  applicationName: devConfig.applicationName,
   applicationUserSecret: databaseStack.applicationUserSecret,
   databaseBootstrapTaskCpu: devConfig.databaseBootstrapTaskCpu,
   databaseBootstrapTaskMemoryMiB: devConfig.databaseBootstrapTaskMemoryMiB,
@@ -186,6 +187,7 @@ new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
   env: {
     region: devConfig.region,
   },
+  environmentName: devConfig.environmentName,
   masterUserSecretArn: databaseStack.masterUserSecretArn,
   migrationUserSecret: databaseStack.migrationUserSecret,
   repository: containerRegistryStack.repository,
