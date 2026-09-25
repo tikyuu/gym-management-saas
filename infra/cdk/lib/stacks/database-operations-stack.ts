@@ -44,6 +44,7 @@ export class DatabaseOperationsStack extends Stack {
       environment: {
         DB_HOST: props.databaseHost,
         DB_NAME: props.databaseName,
+        DB_SSL_ROOT_CERT: "/app/certs/rds-ca-bundle.pem",
       },
       image: ecs.ContainerImage.fromEcrRepository(
         props.repository,
