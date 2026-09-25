@@ -58,18 +58,23 @@ jobs:
         if: inputs.operation == 'deploy'
         run: |
           test -n "${{ inputs.stack_name }}"
-      - name: Validate DB bootstrap image tag
-        if: inputs.operation == 'deploy' && inputs.stack_name == 'DevDatabaseOperationsStack'
+      - name: Validate image tag
+        if: inputs.operation == 'deploy' && (inputs.stack_name == 'DevDatabaseOperationsStack' || inputs.stack_name == 'DevApplicationStack')
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: test -n "$IMAGE_TAG"
       - run: npm ci
         if: inputs.operation == 'deploy'
       - name: Deploy selected stack
-        if: inputs.operation == 'deploy' && inputs.stack_name != 'DevDatabaseOperationsStack'
+        if: inputs.operation == 'deploy' && inputs.stack_name != 'DevDatabaseOperationsStack' && inputs.stack_name != 'DevApplicationStack'
         run: npx cdk deploy ${{ inputs.stack_name }} --exclusively --require-approval never
       - name: Deploy database operations stack
         if: inputs.operation == 'deploy' && inputs.stack_name == 'DevDatabaseOperationsStack'
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: npx cdk deploy DevDatabaseOperationsStack --parameters "DevDatabaseOperationsStack:DatabaseBootstrapImageTag=$IMAGE_TAG" --exclusively --require-approval never
+      - name: Deploy application stack
+        if: inputs.operation == 'deploy' && inputs.stack_name == 'DevApplicationStack'
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: npx cdk deploy DevApplicationStack --parameters "DevApplicationStack:ApiImageTag=$IMAGE_TAG" --exclusively --require-approval never
