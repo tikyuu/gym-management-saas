@@ -33,5 +33,32 @@ export class CiCdIdentityStack extends Stack {
         ],
       }),
     );
+
+    gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["ecr:GetAuthorizationToken"],
+        resources: ["*"],
+      }),
+    );
+
+    gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:BatchGetImage",
+          "ecr:CompleteLayerUpload",
+          "ecr:InitiateLayerUpload",
+          "ecr:PutImage",
+          "ecr:UploadLayerPart",
+        ],
+        resources: [
+          this.formatArn({
+            service: "ecr",
+            resource: "repository",
+            resourceName: "gym-management-dev-api-ecr",
+          }),
+        ],
+      }),
+    );
   }
 }
