@@ -28,6 +28,12 @@ export class DatabaseOperationsStack extends Stack {
       type: "String",
     });
 
+    const masterUserSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      "MasterUserSecret",
+      props.masterUserSecretArn,
+    );
+
     const taskDefinition = new ecs.FargateTaskDefinition(this, "DatabaseBootstrapTaskDefinition", {
       cpu: props.databaseBootstrapTaskCpu,
       memoryLimitMiB: props.databaseBootstrapTaskMemoryMiB,
@@ -35,6 +41,10 @@ export class DatabaseOperationsStack extends Stack {
 
     taskDefinition.addContainer("DatabaseBootstrapContainer", {
       command: ["/app/.venv/bin/python", "-m", "app.bootstrap_db"],
+      environment: {
+        DB_HOST: props.databaseHost,
+        DB_NAME: props.databaseName,
+      },
       image: ecs.ContainerImage.fromEcrRepository(
         props.repository,
         databaseBootstrapImageTag.valueAsString,
