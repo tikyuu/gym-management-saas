@@ -65,7 +65,7 @@ const wafStack = new WafStack(app, "DevWafStack", {
   environmentName: devConfig.environmentName,
 });
 
-new AuthenticationStack(app, "DevAuthenticationStack", {
+const authenticationStack = new AuthenticationStack(app, "DevAuthenticationStack", {
   applicationName: devConfig.applicationName,
   crossRegionReferences: true,
   customerAuthDomainName: devConfig.customerAuthDomainName,
@@ -91,6 +91,11 @@ new AuthenticationStack(app, "DevAuthenticationStack", {
   userPoolDeletionProtection:
     devConfig.authenticationUserPoolDeletionProtection,
 });
+
+const customerUserPoolId = authenticationStack.customerUserPool.userPoolId;
+const staffUserPoolId = authenticationStack.staffUserPool.userPoolId;
+const systemAdminUserPoolId =
+  authenticationStack.systemAdminUserPool.userPoolId;
 
 const containerRegistryStack = new ContainerRegistryStack(
   app,
@@ -164,6 +169,7 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   applicationUserSecret: databaseStack.applicationUserSecret,
   apiDesiredCount: devConfig.apiDesiredCount,
   certificate: regionalCertificateStack.certificate,
+  customerUserPoolId,
   databaseHost: databaseStack.databaseEndpointAddress,
   databaseName: devConfig.databaseName,
   ecsSecurityGroup: networkStack.ecsSecurityGroup,
@@ -173,6 +179,8 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   },
   repository: containerRegistryStack.repository,
   internalAlbSubnets: networkStack.internalAlbSubnets,
+  staffUserPoolId,
+  systemAdminUserPoolId,
   taskCpu: devConfig.apiTaskCpu,
   taskMemoryMiB: devConfig.apiTaskMemoryMiB,
   vpc: networkStack.vpc,
