@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
 import { devConfig } from "../lib/config/dev-config";
+import { AlertNotificationStack } from "../lib/stacks/alert-notification-stack";
 import { ApplicationMonitoringStack } from "../lib/stacks/application-monitoring-stack";
 import { AuditStack } from "../lib/stacks/audit-stack";
 import { ApplicationStack } from "../lib/stacks/application-stack";
@@ -136,10 +137,23 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   vpc: networkStack.vpc,
 });
 
-const applicationMonitoringStack = new ApplicationMonitoringStack(
+const alertNotificationStack = new AlertNotificationStack(
+  app,
+  "DevAlertNotificationStack",
+  {
+    applicationName: devConfig.applicationName,
+    environmentName: devConfig.environmentName,
+    env: {
+      region: devConfig.region,
+    },
+  },
+);
+
+new ApplicationMonitoringStack(
   app,
   "DevApplicationMonitoringStack",
   {
+    alertTopic: alertNotificationStack.alertTopic,
     apiService: applicationStack.apiService,
     apiTargetGroup: applicationStack.apiTargetGroup,
     applicationName: devConfig.applicationName,
@@ -152,7 +166,7 @@ const applicationMonitoringStack = new ApplicationMonitoringStack(
 );
 
 const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
-  alertTopic: applicationMonitoringStack.alertTopic,
+  alertTopic: alertNotificationStack.alertTopic,
   applicationName: devConfig.applicationName,
   databaseAllocatedStorage: devConfig.databaseAllocatedStorage,
   databaseAutoMinorVersionUpgrade: devConfig.databaseAutoMinorVersionUpgrade,

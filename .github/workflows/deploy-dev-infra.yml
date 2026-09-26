@@ -18,6 +18,7 @@ on:
         options:
           - DevCiCdIdentityStack
           - DevContainerRegistryStack
+          - DevAlertNotificationStack
           - DevRegionalCertificateStack
           - DevNetworkStack
           - DevApplicationStack
