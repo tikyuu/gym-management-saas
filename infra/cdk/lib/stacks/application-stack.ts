@@ -112,14 +112,24 @@ export class ApplicationStack extends Stack {
 
     taskDefinition.taskRole.addToPrincipalPolicy(
       new iam.PolicyStatement({
-        actions: ["cognito-idp:AdminGetUser", "cognito-idp:ListUsers"],
+        actions: [
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:ListUsers",
+          "cognito-idp:AdminDisableUser",
+          "cognito-idp:AdminEnableUser",
+        ],
         resources: [props.customerUserPoolArn],
       }),
     );
 
     taskDefinition.taskRole.addToPrincipalPolicy(
       new iam.PolicyStatement({
-        actions: ["cognito-idp:AdminCreateUser", "cognito-idp:AdminDeleteUser"],
+        actions: [
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminDeleteUser",
+          "cognito-idp:AdminDisableUser",
+          "cognito-idp:AdminEnableUser",
+        ],
         resources: [props.staffUserPoolArn],
       }),
     );
