@@ -1,0 +1,56 @@
+name: Run Development DB Migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+
+jobs:
+  run-task:
+    name: Run and verify DB migration task
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      CLUSTER_NAME: gym-management-dev-ecs-cluster
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: arn:aws:iam::526811500752:role/gym-management-dev-github-deploy-role
+      - name: Read DB migration task definition ARN
+        run: |
+          TASK_DEFINITION_ARN=$(aws cloudformation describe-stacks --stack-name DevDatabaseOperationsStack --query "Stacks[0].Outputs[?OutputKey=='DatabaseMigrationTaskDefinitionArn'].OutputValue | [0]" --output text)
+          test -n "$TASK_DEFINITION_ARN" && test "$TASK_DEFINITION_ARN" != "None"
+          echo "TASK_DEFINITION_ARN=$TASK_DEFINITION_ARN" >> "$GITHUB_ENV"
+      - name: Read application subnet IDs
+        run: |
+          APPLICATION_SUBNET_IDS=$(aws cloudformation describe-stacks --stack-name DevNetworkStack --query "Stacks[0].Outputs[?OutputKey=='ApplicationSubnetIds'].OutputValue | [0]" --output text)
+          test -n "$APPLICATION_SUBNET_IDS" && test "$APPLICATION_SUBNET_IDS" != "None"
+          echo "APPLICATION_SUBNET_IDS=$APPLICATION_SUBNET_IDS" >> "$GITHUB_ENV"
+      - name: Read DB operations security group ID
+        run: |
+          DB_SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name DevNetworkStack --query "Stacks[0].Outputs[?OutputKey=='DatabaseBootstrapSecurityGroupId'].OutputValue | [0]" --output text)
+          test -n "$DB_SECURITY_GROUP_ID" && test "$DB_SECURITY_GROUP_ID" != "None"
+          echo "DB_SECURITY_GROUP_ID=$DB_SECURITY_GROUP_ID" >> "$GITHUB_ENV"
+      - name: Start DB migration task
+        run: |
+          TASK_RESPONSE=$(aws ecs run-task \
+            --cluster "$CLUSTER_NAME" \
+            --task-definition "$TASK_DEFINITION_ARN" \
+            --launch-type FARGATE \
+            --count 1 \
+            --network-configuration "awsvpcConfiguration={subnets=[$APPLICATION_SUBNET_IDS],securityGroups=[$DB_SECURITY_GROUP_ID],assignPublicIp=DISABLED}")
+          printf '%s\n' "$TASK_RESPONSE" | jq -e '.failures | length == 0' > /dev/null
+          TASK_ARN=$(printf '%s\n' "$TASK_RESPONSE" | jq -r '.tasks[0].taskArn // empty')
+          test -n "$TASK_ARN"
+          echo "TASK_ARN=$TASK_ARN" >> "$GITHUB_ENV"
+          echo "Started ECS task: $TASK_ARN"
+      - name: Wait for DB migration task to stop
+        run: aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN"
+      - name: Check DB migration exit code
+        run: |
+          TASK_EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --query "tasks[0].containers[?name=='DatabaseMigrationContainer'].exitCode | [0]" --output text)
+          echo "DB migration exit code: $TASK_EXIT_CODE"
+          test "$TASK_EXIT_CODE" = "0"
