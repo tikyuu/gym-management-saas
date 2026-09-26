@@ -25,6 +25,7 @@ interface DatabaseOperationsStackProps extends StackProps {
 }
 
 export class DatabaseOperationsStack extends Stack {
+  public readonly migrationTaskDefinition: ecs.FargateTaskDefinition;
   public readonly taskDefinition: ecs.FargateTaskDefinition;
 
   constructor(scope: Construct, id: string, props: DatabaseOperationsStackProps) {
@@ -36,8 +37,14 @@ export class DatabaseOperationsStack extends Stack {
       retention: logs.RetentionDays.TWO_MONTHS,
     });
 
-    const databaseBootstrapImageTag = new CfnParameter(this, "DatabaseBootstrapImageTag", {
-      description: "Git commit SHA used as the DB bootstrap ECR image tag",
+    const databaseMigrationLogGroup = new logs.LogGroup(this, "DatabaseMigrationLogGroup", {
+      logGroupName: `/ecs/${props.applicationName}-${props.environmentName}-db-migration`,
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.TWO_MONTHS,
+    });
+
+    const databaseOperationsImageTag = new CfnParameter(this, "DatabaseBootstrapImageTag", {
+      description: "Git commit SHA used as the DB operations ECR image tag",
       type: "String",
     });
 
@@ -62,7 +69,7 @@ export class DatabaseOperationsStack extends Stack {
       },
       image: ecs.ContainerImage.fromEcrRepository(
         props.repository,
-        databaseBootstrapImageTag.valueAsString,
+        databaseOperationsImageTag.valueAsString,
       ),
       logging: ecs.LogDrivers.awsLogs({
         logGroup: databaseBootstrapLogGroup,
@@ -78,8 +85,39 @@ export class DatabaseOperationsStack extends Stack {
       },
     });
 
+    this.migrationTaskDefinition = new ecs.FargateTaskDefinition(this, "DatabaseMigrationTaskDefinition", {
+      cpu: props.databaseBootstrapTaskCpu,
+      family: `${props.applicationName}-${props.environmentName}-db-migration`,
+      memoryLimitMiB: props.databaseBootstrapTaskMemoryMiB,
+    });
+
+    this.migrationTaskDefinition.addContainer("DatabaseMigrationContainer", {
+      command: ["/app/.venv/bin/alembic", "upgrade", "head"],
+      environment: {
+        DB_HOST: props.databaseHost,
+        DB_NAME: props.databaseName,
+        DB_SSL_ROOT_CERT: "/app/certs/rds-ca-bundle.pem",
+      },
+      image: ecs.ContainerImage.fromEcrRepository(
+        props.repository,
+        databaseOperationsImageTag.valueAsString,
+      ),
+      logging: ecs.LogDrivers.awsLogs({
+        logGroup: databaseMigrationLogGroup,
+        streamPrefix: "db-migration",
+      }),
+      secrets: {
+        DB_USERNAME: ecs.Secret.fromSecretsManager(props.migrationUserSecret, "username"),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(props.migrationUserSecret, "password"),
+      },
+    });
+
     new CfnOutput(this, "DatabaseBootstrapTaskDefinitionArn", {
       value: this.taskDefinition.taskDefinitionArn,
+    });
+
+    new CfnOutput(this, "DatabaseMigrationTaskDefinitionArn", {
+      value: this.migrationTaskDefinition.taskDefinitionArn,
     });
   }
 }
