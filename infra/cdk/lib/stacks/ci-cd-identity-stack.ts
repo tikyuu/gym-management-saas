@@ -85,6 +85,24 @@ export class CiCdIdentityStack extends Stack {
         ],
       }),
     );
+
+    this.gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["cloudformation:DescribeStacks"],
+        resources: [
+          this.formatArn({
+            service: "cloudformation",
+            resource: "stack",
+            resourceName: "DevDatabaseOperationsStack/*",
+          }),
+          this.formatArn({
+            service: "cloudformation",
+            resource: "stack",
+            resourceName: "DevNetworkStack/*",
+          }),
+        ],
+      }),
+    );
   }
 
   public grantDatabaseBootstrapPassRole(taskDefinition: ecs.FargateTaskDefinition): void {
