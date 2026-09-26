@@ -82,6 +82,11 @@ export class CiCdIdentityStack extends Stack {
             resource: "task-definition",
             resourceName: "gym-management-dev-db-bootstrap:*",
           }),
+          this.formatArn({
+            service: "ecs",
+            resource: "task-definition",
+            resourceName: "gym-management-dev-db-migration:*",
+          }),
         ],
       }),
     );
@@ -118,7 +123,10 @@ export class CiCdIdentityStack extends Stack {
     );
   }
 
-  public grantDatabaseBootstrapPassRole(taskDefinition: ecs.FargateTaskDefinition): void {
+  public grantDatabaseOperationsPassRole(
+    bootstrapTaskDefinition: ecs.FargateTaskDefinition,
+    migrationTaskDefinition: ecs.FargateTaskDefinition,
+  ): void {
     this.gitHubDevDeployRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ["iam:PassRole"],
@@ -128,8 +136,10 @@ export class CiCdIdentityStack extends Stack {
           },
         },
         resources: [
-          taskDefinition.taskRole.roleArn,
-          taskDefinition.obtainExecutionRole().roleArn,
+          bootstrapTaskDefinition.taskRole.roleArn,
+          bootstrapTaskDefinition.obtainExecutionRole().roleArn,
+          migrationTaskDefinition.taskRole.roleArn,
+          migrationTaskDefinition.obtainExecutionRole().roleArn,
         ],
       }),
     );

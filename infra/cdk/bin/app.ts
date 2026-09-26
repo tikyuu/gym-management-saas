@@ -193,7 +193,10 @@ const databaseOperationsStack = new DatabaseOperationsStack(app, "DevDatabaseOpe
   repository: containerRegistryStack.repository,
 });
 
-ciCdIdentityStack.grantDatabaseBootstrapPassRole(databaseOperationsStack.taskDefinition);
+ciCdIdentityStack.grantDatabaseOperationsPassRole(
+  databaseOperationsStack.taskDefinition,
+  databaseOperationsStack.migrationTaskDefinition,
+);
 
 const cloudFrontStack = new CloudFrontStack(app, "DevCloudFrontStack", {
   albSecurityGroupId: networkStack.albSecurityGroup.securityGroupId,
