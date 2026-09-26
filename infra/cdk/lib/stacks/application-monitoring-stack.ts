@@ -7,6 +7,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import { Construct } from "constructs";
 
 interface ApplicationMonitoringStackProps extends StackProps {
+  alertTopic: sns.ITopic;
   apiService: ecs.FargateService;
   apiTargetGroup: elbv2.ApplicationTargetGroup;
   applicationName: string;
@@ -15,8 +16,6 @@ interface ApplicationMonitoringStackProps extends StackProps {
 }
 
 export class ApplicationMonitoringStack extends Stack {
-  public readonly alertTopic: sns.Topic;
-
   constructor(
     scope: Construct,
     id: string,
@@ -25,10 +24,6 @@ export class ApplicationMonitoringStack extends Stack {
     super(scope, id, props);
 
     const resourceNamePrefix = `${props.applicationName}-${props.environmentName}`;
-
-    this.alertTopic = new sns.Topic(this, "AlertTopic", {
-      topicName: `${resourceNamePrefix}-alerts`,
-    });
 
     const healthyHostCountMetric =
       props.apiTargetGroup.metricHealthyHostCount({
@@ -67,7 +62,7 @@ export class ApplicationMonitoringStack extends Stack {
     );
 
     healthyHostCountAlarm.addAlarmAction(
-      new cloudwatchActions.SnsAction(this.alertTopic),
+      new cloudwatchActions.SnsAction(props.alertTopic),
     );
 
     const memoryUtilizationAlarm = new cloudwatch.Alarm(
@@ -86,7 +81,7 @@ export class ApplicationMonitoringStack extends Stack {
     );
 
     memoryUtilizationAlarm.addAlarmAction(
-      new cloudwatchActions.SnsAction(this.alertTopic),
+      new cloudwatchActions.SnsAction(props.alertTopic),
     );
 
     const databaseCpuUtilizationAlarm = new cloudwatch.Alarm(
@@ -105,7 +100,7 @@ export class ApplicationMonitoringStack extends Stack {
     );
 
     databaseCpuUtilizationAlarm.addAlarmAction(
-      new cloudwatchActions.SnsAction(this.alertTopic),
+      new cloudwatchActions.SnsAction(props.alertTopic),
     );
 
     const applicationDashboard = new cloudwatch.Dashboard(
