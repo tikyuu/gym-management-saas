@@ -13,6 +13,7 @@ import {
   aws_elasticloadbalancingv2 as elbv2,
   aws_logs as logs,
   aws_s3 as s3,
+  aws_secretsmanager as secretsmanager,
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 
@@ -20,8 +21,11 @@ interface ApplicationStackProps extends StackProps {
   albSecurityGroup: ec2.ISecurityGroup;
   applicationName: string;
   applicationSubnets: ec2.ISubnet[];
+  applicationUserSecret: secretsmanager.ISecret;
   apiDesiredCount: number;
   certificate: acm.ICertificate;
+  databaseHost: string;
+  databaseName: string;
   ecsSecurityGroup: ec2.ISecurityGroup;
   environmentName: string;
   internalAlbSubnets: ec2.ISubnet[];
@@ -102,6 +106,11 @@ export class ApplicationStack extends Stack {
 
     taskDefinition.addContainer("ApiContainer", {
       containerName: `${resourceNamePrefix}-api-container`,
+      environment: {
+        DB_HOST: props.databaseHost,
+        DB_NAME: props.databaseName,
+        DB_SSL_ROOT_CERT: "/app/certs/rds-ca-bundle.pem",
+      },
       essential: true,
       image: ecs.ContainerImage.fromEcrRepository(
         props.repository,
@@ -112,6 +121,10 @@ export class ApplicationStack extends Stack {
         streamPrefix: "api",
       }),
       portMappings: [{ containerPort: 8000 }],
+      secrets: {
+        DB_USERNAME: ecs.Secret.fromSecretsManager(props.applicationUserSecret, "username"),
+        DB_PASSWORD: ecs.Secret.fromSecretsManager(props.applicationUserSecret, "password"),
+      },
     });
 
     const apiService = new ecs.FargateService(this, "ApiService", {
