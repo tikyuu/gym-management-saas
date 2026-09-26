@@ -119,24 +119,6 @@ const networkStack = new NetworkStack(app, "DevNetworkStack", {
   databaseSubnets: devConfig.databaseSubnets,
 });
 
-const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
-  albSecurityGroup: networkStack.albSecurityGroup,
-  applicationName: devConfig.applicationName,
-  applicationSubnets: networkStack.applicationSubnets,
-  apiDesiredCount: devConfig.apiDesiredCount,
-  certificate: regionalCertificateStack.certificate,
-  ecsSecurityGroup: networkStack.ecsSecurityGroup,
-  environmentName: devConfig.environmentName,
-  env: {
-    region: devConfig.region,
-  },
-  repository: containerRegistryStack.repository,
-  internalAlbSubnets: networkStack.internalAlbSubnets,
-  taskCpu: devConfig.apiTaskCpu,
-  taskMemoryMiB: devConfig.apiTaskMemoryMiB,
-  vpc: networkStack.vpc,
-});
-
 const alertNotificationStack = new AlertNotificationStack(
   app,
   "DevAlertNotificationStack",
@@ -146,22 +128,6 @@ const alertNotificationStack = new AlertNotificationStack(
     env: {
       region: devConfig.region,
     },
-  },
-);
-
-new ApplicationMonitoringStack(
-  app,
-  "DevApplicationMonitoringStack",
-  {
-    alertTopic: alertNotificationStack.alertTopic,
-    apiService: applicationStack.apiService,
-    apiTargetGroup: applicationStack.apiTargetGroup,
-    applicationName: devConfig.applicationName,
-    databaseInstanceIdentifier: devConfig.databaseInstanceIdentifier,
-    env: {
-      region: devConfig.region,
-    },
-    environmentName: devConfig.environmentName,
   },
 );
 
@@ -190,6 +156,43 @@ const databaseStack = new DatabaseStack(app, "DevDatabaseStack", {
   environmentName: devConfig.environmentName,
   rdsSecurityGroup: networkStack.rdsSecurityGroup,
 });
+
+const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
+  albSecurityGroup: networkStack.albSecurityGroup,
+  applicationName: devConfig.applicationName,
+  applicationSubnets: networkStack.applicationSubnets,
+  applicationUserSecret: databaseStack.applicationUserSecret,
+  apiDesiredCount: devConfig.apiDesiredCount,
+  certificate: regionalCertificateStack.certificate,
+  databaseHost: databaseStack.databaseEndpointAddress,
+  databaseName: devConfig.databaseName,
+  ecsSecurityGroup: networkStack.ecsSecurityGroup,
+  environmentName: devConfig.environmentName,
+  env: {
+    region: devConfig.region,
+  },
+  repository: containerRegistryStack.repository,
+  internalAlbSubnets: networkStack.internalAlbSubnets,
+  taskCpu: devConfig.apiTaskCpu,
+  taskMemoryMiB: devConfig.apiTaskMemoryMiB,
+  vpc: networkStack.vpc,
+});
+
+new ApplicationMonitoringStack(
+  app,
+  "DevApplicationMonitoringStack",
+  {
+    alertTopic: alertNotificationStack.alertTopic,
+    apiService: applicationStack.apiService,
+    apiTargetGroup: applicationStack.apiTargetGroup,
+    applicationName: devConfig.applicationName,
+    databaseInstanceIdentifier: devConfig.databaseInstanceIdentifier,
+    env: {
+      region: devConfig.region,
+    },
+    environmentName: devConfig.environmentName,
+  },
+);
 
 const databaseOperationsStack = new DatabaseOperationsStack(app, "DevDatabaseOperationsStack", {
   applicationName: devConfig.applicationName,
