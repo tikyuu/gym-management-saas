@@ -1,0 +1,37 @@
+name: Prepare Development DB Bootstrap
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+
+jobs:
+  prepare:
+    name: Read DB bootstrap prerequisites - does not run the task
+    runs-on: ubuntu-latest
+    environment: development
+    env:
+      CLUSTER_NAME: gym-management-dev-ecs-cluster
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: arn:aws:iam::526811500752:role/gym-management-dev-github-deploy-role
+      - name: Read DB bootstrap task definition ARN
+        run: |
+          TASK_DEFINITION_ARN=$(aws cloudformation describe-stacks --stack-name DevDatabaseOperationsStack --query "Stacks[0].Outputs[?OutputKey=='DatabaseBootstrapTaskDefinitionArn'].OutputValue | [0]" --output text)
+          test -n "$TASK_DEFINITION_ARN" && test "$TASK_DEFINITION_ARN" != "None"
+          echo "TASK_DEFINITION_ARN=$TASK_DEFINITION_ARN" >> "$GITHUB_ENV"
+      - name: Read application subnet IDs
+        run: |
+          APPLICATION_SUBNET_IDS=$(aws cloudformation describe-stacks --stack-name DevNetworkStack --query "Stacks[0].Outputs[?OutputKey=='ApplicationSubnetIds'].OutputValue | [0]" --output text)
+          test -n "$APPLICATION_SUBNET_IDS" && test "$APPLICATION_SUBNET_IDS" != "None"
+          echo "APPLICATION_SUBNET_IDS=$APPLICATION_SUBNET_IDS" >> "$GITHUB_ENV"
+      - name: Read DB bootstrap security group ID
+        run: |
+          DB_BOOTSTRAP_SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name DevNetworkStack --query "Stacks[0].Outputs[?OutputKey=='DatabaseBootstrapSecurityGroupId'].OutputValue | [0]" --output text)
+          test -n "$DB_BOOTSTRAP_SECURITY_GROUP_ID" && test "$DB_BOOTSTRAP_SECURITY_GROUP_ID" != "None"
+          echo "DB_BOOTSTRAP_SECURITY_GROUP_ID=$DB_BOOTSTRAP_SECURITY_GROUP_ID" >> "$GITHUB_ENV"
+      - run: echo "DB bootstrap execution is not configured yet. No AWS resources were changed."
