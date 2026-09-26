@@ -1,4 +1,4 @@
-name: Prepare Development DB Bootstrap
+name: Run Development DB Bootstrap
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ permissions:
   id-token: write
 
 jobs:
-  prepare:
-    name: Read DB bootstrap prerequisites - does not run the task
+  run-task:
+    name: Run and verify DB bootstrap task
     runs-on: ubuntu-latest
     environment: development
     env:
@@ -34,4 +34,23 @@ jobs:
           DB_BOOTSTRAP_SECURITY_GROUP_ID=$(aws cloudformation describe-stacks --stack-name DevNetworkStack --query "Stacks[0].Outputs[?OutputKey=='DatabaseBootstrapSecurityGroupId'].OutputValue | [0]" --output text)
           test -n "$DB_BOOTSTRAP_SECURITY_GROUP_ID" && test "$DB_BOOTSTRAP_SECURITY_GROUP_ID" != "None"
           echo "DB_BOOTSTRAP_SECURITY_GROUP_ID=$DB_BOOTSTRAP_SECURITY_GROUP_ID" >> "$GITHUB_ENV"
-      - run: echo "DB bootstrap execution is not configured yet. No AWS resources were changed."
+      - name: Start DB bootstrap task
+        run: |
+          TASK_RESPONSE=$(aws ecs run-task \
+            --cluster "$CLUSTER_NAME" \
+            --task-definition "$TASK_DEFINITION_ARN" \
+            --launch-type FARGATE \
+            --count 1 \
+            --network-configuration "awsvpcConfiguration={subnets=[$APPLICATION_SUBNET_IDS],securityGroups=[$DB_BOOTSTRAP_SECURITY_GROUP_ID],assignPublicIp=DISABLED}")
+          printf '%s\n' "$TASK_RESPONSE" | jq -e '.failures | length == 0' > /dev/null
+          TASK_ARN=$(printf '%s\n' "$TASK_RESPONSE" | jq -r '.tasks[0].taskArn // empty')
+          test -n "$TASK_ARN"
+          echo "TASK_ARN=$TASK_ARN" >> "$GITHUB_ENV"
+          echo "Started ECS task: $TASK_ARN"
+      - name: Wait for DB bootstrap task to stop
+        run: aws ecs wait tasks-stopped --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN"
+      - name: Check DB bootstrap exit code
+        run: |
+          TASK_EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER_NAME" --tasks "$TASK_ARN" --query "tasks[0].containers[?name=='DatabaseBootstrapContainer'].exitCode | [0]" --output text)
+          echo "DB bootstrap exit code: $TASK_EXIT_CODE"
+          test "$TASK_EXIT_CODE" = "0"

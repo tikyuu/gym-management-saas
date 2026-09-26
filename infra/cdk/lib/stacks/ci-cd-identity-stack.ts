@@ -88,6 +88,19 @@ export class CiCdIdentityStack extends Stack {
 
     this.gitHubDevDeployRole.addToPolicy(
       new iam.PolicyStatement({
+        actions: ["ecs:DescribeTasks"],
+        resources: [
+          this.formatArn({
+            service: "ecs",
+            resource: "task",
+            resourceName: "gym-management-dev-ecs-cluster/*",
+          }),
+        ],
+      }),
+    );
+
+    this.gitHubDevDeployRole.addToPolicy(
+      new iam.PolicyStatement({
         actions: ["cloudformation:DescribeStacks"],
         resources: [
           this.formatArn({
