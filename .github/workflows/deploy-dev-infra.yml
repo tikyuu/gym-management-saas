@@ -20,12 +20,17 @@ on:
           - DevContainerRegistryStack
           - DevAlertNotificationStack
           - DevRegionalCertificateStack
+          - DevEdgeCertificateStack
+          - DevWafStack
           - DevNetworkStack
           - DevApplicationStack
+          - DevApplicationMonitoringStack
           - DevDatabaseStack
           - DevDatabaseOperationsStack
           - DevAuthenticationStack
           - DevCloudFrontStack
+          - DevEdgeMonitoringStack
+          - DevAuditStack
       image_tag:
         description: DB初期化タスクで使うECRイメージのタグ
         required: false
