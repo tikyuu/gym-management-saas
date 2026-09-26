@@ -33,6 +33,7 @@ interface ApplicationStackProps extends StackProps {
   environmentName: string;
   internalAlbSubnets: ec2.ISubnet[];
   repository: ecr.IRepository;
+  staffUserPoolArn: string;
   staffUserPoolId: string;
   systemAdminUserPoolId: string;
   taskCpu: number;
@@ -113,6 +114,13 @@ export class ApplicationStack extends Stack {
       new iam.PolicyStatement({
         actions: ["cognito-idp:AdminGetUser", "cognito-idp:ListUsers"],
         resources: [props.customerUserPoolArn],
+      }),
+    );
+
+    taskDefinition.taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["cognito-idp:AdminCreateUser", "cognito-idp:AdminDeleteUser"],
+        resources: [props.staffUserPoolArn],
       }),
     );
 

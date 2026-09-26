@@ -180,6 +180,7 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   },
   repository: containerRegistryStack.repository,
   internalAlbSubnets: networkStack.internalAlbSubnets,
+  staffUserPoolArn: authenticationStack.staffUserPool.userPoolArn,
   staffUserPoolId,
   systemAdminUserPoolId,
   taskCpu: devConfig.apiTaskCpu,
