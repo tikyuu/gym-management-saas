@@ -11,6 +11,7 @@ import {
   aws_ecr as ecr,
   aws_ecs as ecs,
   aws_elasticloadbalancingv2 as elbv2,
+  aws_iam as iam,
   aws_logs as logs,
   aws_s3 as s3,
   aws_secretsmanager as secretsmanager,
@@ -24,6 +25,7 @@ interface ApplicationStackProps extends StackProps {
   applicationUserSecret: secretsmanager.ISecret;
   apiDesiredCount: number;
   certificate: acm.ICertificate;
+  customerUserPoolArn: string;
   customerUserPoolId: string;
   databaseHost: string;
   databaseName: string;
@@ -105,6 +107,13 @@ export class ApplicationStack extends Stack {
         family: `${resourceNamePrefix}-api-task`,
         memoryLimitMiB: props.taskMemoryMiB,
       },
+    );
+
+    taskDefinition.taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["cognito-idp:AdminGetUser", "cognito-idp:ListUsers"],
+        resources: [props.customerUserPoolArn],
+      }),
     );
 
     taskDefinition.addContainer("ApiContainer", {

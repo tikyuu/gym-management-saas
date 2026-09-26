@@ -169,6 +169,7 @@ const applicationStack = new ApplicationStack(app, "DevApplicationStack", {
   applicationUserSecret: databaseStack.applicationUserSecret,
   apiDesiredCount: devConfig.apiDesiredCount,
   certificate: regionalCertificateStack.certificate,
+  customerUserPoolArn: authenticationStack.customerUserPool.userPoolArn,
   customerUserPoolId,
   databaseHost: databaseStack.databaseEndpointAddress,
   databaseName: devConfig.databaseName,
