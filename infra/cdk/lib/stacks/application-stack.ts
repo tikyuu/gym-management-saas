@@ -24,12 +24,15 @@ interface ApplicationStackProps extends StackProps {
   applicationUserSecret: secretsmanager.ISecret;
   apiDesiredCount: number;
   certificate: acm.ICertificate;
+  customerUserPoolId: string;
   databaseHost: string;
   databaseName: string;
   ecsSecurityGroup: ec2.ISecurityGroup;
   environmentName: string;
   internalAlbSubnets: ec2.ISubnet[];
   repository: ecr.IRepository;
+  staffUserPoolId: string;
+  systemAdminUserPoolId: string;
   taskCpu: number;
   taskMemoryMiB: number;
   vpc: ec2.IVpc;
@@ -107,9 +110,13 @@ export class ApplicationStack extends Stack {
     taskDefinition.addContainer("ApiContainer", {
       containerName: `${resourceNamePrefix}-api-container`,
       environment: {
+        AWS_REGION: Aws.REGION,
+        CUSTOMER_USER_POOL_ID: props.customerUserPoolId,
         DB_HOST: props.databaseHost,
         DB_NAME: props.databaseName,
         DB_SSL_ROOT_CERT: "/app/certs/rds-ca-bundle.pem",
+        STAFF_USER_POOL_ID: props.staffUserPoolId,
+        SYSTEM_ADMIN_USER_POOL_ID: props.systemAdminUserPoolId,
       },
       essential: true,
       image: ecs.ContainerImage.fromEcrRepository(
