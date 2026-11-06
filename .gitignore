@@ -3,3 +3,20 @@ __pycache__/
 .env
 .env.*
 !.env.example
+
+# ローカル認証情報・状態・生成物を公開しない
+.aws/
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+crash.log
+crash.*.log
+cdk.out/
+node_modules/
+.DS_Store

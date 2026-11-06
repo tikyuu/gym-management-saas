@@ -12,3 +12,9 @@ Reactフロントエンドと本番環境の構築は今回の完成範囲に含
 ## 検証状況
 
 コード・ローカル環境・CIでの検証を進めています。AWS上でシステム全体が稼働することは、まだ確認していません。
+
+## セキュリティ検査
+
+[![Security checks](https://github.com/tikyuu/gym-management-saas/actions/workflows/security.yml/badge.svg)](https://github.com/tikyuu/gym-management-saas/actions/workflows/security.yml)
+
+[検査の内容と制約](SECURITY.md)を参照してください。PRで秘密情報・依存関係を検査し、IaCの指摘も報告します。検査結果と対応履歴を確認しながら保守します。
